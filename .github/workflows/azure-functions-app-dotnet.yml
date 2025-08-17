@@ -85,8 +85,10 @@ jobs:
             Write-Host "✅ Functions project found"
           }
           
-          "environment=$environment" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "function-app-name=$functionAppName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $envOutput = "environment=$environment"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $envOutput
+          $appOutput = "function-app-name=$functionAppName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $appOutput
       
       - name: Check Azure credentials
         shell: powershell
@@ -145,21 +147,24 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            "project-exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            $projectExistsOutput = "project-exists=true"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
             
             # Look for project files
             $projectFiles = Get-ChildItem -Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" -Filter "*.csproj" -Recurse
             if ($projectFiles.Count -gt 0) {
               $projectFile = $projectFiles[0].FullName
               Write-Host "📁 Project file: $projectFile"
-              "project-file=$projectFile" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+              $projectFileOutput = "project-file=$projectFile"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $projectFileOutput
             } else {
               Write-Error "❌ No .csproj file found in Functions directory"
               exit 1
             }
           } else {
             Write-Host "ℹ️ No Functions project found, skipping deployment"
-            "project-exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            $projectExistsOutput = "project-exists=false"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
           }
       
       - name: Restore NuGet packages

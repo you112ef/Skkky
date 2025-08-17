@@ -67,7 +67,8 @@ jobs:
             'AvailableSpace' = [math]::Round((Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3" | Where-Object DeviceID -eq "C:" | Select-Object -ExpandProperty FreeSpace) / 1GB, 2)
           }
           $jsonInfo = $runnerInfo | ConvertTo-Json -Compress
-          "info=$jsonInfo" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $output = "info=$jsonInfo"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $output
           Write-Host "🖥️ Runner OS: $($runnerInfo.OSVersion)"
           Write-Host "🏗️ Architecture: $($runnerInfo.Architecture)"
           Write-Host "💾 Memory: $($runnerInfo.TotalMemory) GB"
@@ -86,7 +87,8 @@ jobs:
           Write-Host "📦 .NET SDK Information:"
           Write-Host $dotnetInfo
           $sdkVersion = dotnet --version
-          "info=$sdkVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $output = "info=$sdkVersion"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $output
 
   # Build and test matrix
   build:

@@ -85,8 +85,10 @@ jobs:
             Write-Host "✅ PowerShell Functions project found"
           }
           
-          "environment=$environment" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "function-app-name=$functionAppName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $envOutput = "environment=$environment"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $envOutput
+          $appOutput = "function-app-name=$functionAppName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $appOutput
       
       - name: Check PowerShell version and capabilities
         id: ps-check
@@ -118,7 +120,8 @@ jobs:
             }
           }
           
-          "version=$($PSVersionTable.PSVersion)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $versionOutput = "version=$($PSVersionTable.PSVersion)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $versionOutput
       
       - name: Check Azure credentials
         shell: powershell
@@ -193,7 +196,8 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ PowerShell Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            "project-exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            $projectExistsOutput = "project-exists=true"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
             
             # Check for host.json and other required files
             $hostJsonPath = Join-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" "host.json"
@@ -234,7 +238,8 @@ jobs:
             
           } else {
             Write-Host "ℹ️ No PowerShell Functions project found, skipping deployment"
-            "project-exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            $projectExistsOutput = "project-exists=false"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
           }
       
       - name: Run PowerShell tests

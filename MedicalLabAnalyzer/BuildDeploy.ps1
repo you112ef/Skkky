@@ -15,6 +15,7 @@ param(
 
 # Script configuration
 $ErrorActionPreference = "Stop"
+$script:StartTime = Get-Date
 $ProjectName = "MedicalLabAnalyzer"
 $ProjectFile = "$ProjectName.csproj"
 $SolutionFile = "$ProjectName.sln"
@@ -540,3 +541,4 @@ Write-Info "   4. Login with default credentials (admin/admin)"
 Write-Info "   5. Configure system and change passwords"
 Write-Info ""
 Write-Success "Build completed in $((Get-Date) - $script:StartTime)"
+Write-Info ""

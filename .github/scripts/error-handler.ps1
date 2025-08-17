@@ -89,7 +89,7 @@ function Handle-Error {
     
     if ($WorkaroundCode) {
         Write-Info "🔧 Workaround code:"
-        Write-Host $WorkaroundCode -ForegroundColor Yellow
+        Write-Host "$WorkaroundCode" -ForegroundColor Yellow
     }
     
     # Attempt recovery if provided
@@ -171,11 +171,11 @@ dotnet restore --verbosity detailed
         
         try {
             $dotnetInfo = & dotnet --info 2>&1
-            Write-Host $dotnetInfo
+            Write-Host "$dotnetInfo"
             
             $sdks = & dotnet --list-sdks 2>&1
             Write-Info "Available SDKs:"
-            Write-Host $sdks
+            Write-Host "$sdks"
             
             # Try to use a specific SDK version if multiple are available
             $sdk8 = $sdks | Where-Object { $_ -like "*8.*" } | Select-Object -First 1

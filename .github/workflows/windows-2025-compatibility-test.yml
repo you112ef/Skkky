@@ -113,7 +113,7 @@ jobs:
         id: system-info
         shell: powershell
         run: |
-          Write-Host " Gathering system information
+          Write-Host "Gathering system information"
           
           $os = Get-CimInstance Win32_OperatingSystem
           $computer = Get-CimInstance Win32_ComputerSystem
@@ -157,7 +157,7 @@ jobs:
               $driveOutput = 'd-drive-available=false'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             } else {
-              Write-Host " D: drive available (unexpected on Server 2025)"
+              Write-Host "D: drive available (unexpected on Server 2025)"
               $driveOutput = 'd-drive-available=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             }
@@ -166,7 +166,7 @@ jobs:
       - name: Run dependency checks
         shell: powershell
         run: |
-          Write-Host " Running dependency checks
+          Write-Host "Running dependency checks"
           
           # Check if our dependency check script exists
           if (Test-Path ".\.github\scripts\check-dependencies.ps1") {
@@ -213,7 +213,7 @@ jobs:
       - name: Verify .NET installation
         shell: powershell
         run: |
-          Write-Host " فحص .NET / Verifying .NET installation"
+          Write-Host "Verifying .NET installation"
           
           try {
             $dotnetInfo = & dotnet --info 2>&1
@@ -248,7 +248,7 @@ jobs:
       - name: Test workspace directory creation
         shell: powershell
         run: |
-          Write-Host " اختبار إنشاء مساحة العمل / Testing workspace creation"
+          Write-Host "Testing workspace creation"
           
           # Test D: drive availability and fallback to C:
           $workspaceDir = if (Test-Path "D:\") {
@@ -290,7 +290,7 @@ jobs:
         if: env.TEST_SCOPE != 'quick'
         shell: powershell
         run: |
-          Write-Host " اختبار بناء المشروع / Testing project build"
+          Write-Host "Testing project build"
           
           # Check if project exists
           if (Test-Path "${{ env.PROJECT_PATH }}\${{ env.PROJECT_PATH }}.csproj") {
@@ -334,7 +334,7 @@ jobs:
         if: env.TEST_SCOPE == 'full'
         shell: powershell
         run: |
-          Write-Host " اختبار متطلبات الذكاء الاصطناعي / Testing AI dependencies"
+          Write-Host "Testing AI dependencies"
           
           $aiPaths = @(
             "${{ env.PROJECT_PATH }}\AI\YOLOv8",
@@ -379,7 +379,7 @@ jobs:
         id: performance
         shell: powershell
         run: |
-          Write-Host " Running performance benchmarks
+          Write-Host "Running performance benchmarks"
           
           $startTime = Get-Date
           
@@ -459,7 +459,7 @@ jobs:
         id: compatibility
         shell: powershell
         run: |
-          Write-Host " تقييم التوافق / Assessing compatibility"
+          Write-Host "Assessing Windows Server 2025 compatibility"
           
           $issues = @()
           $warnings = @()

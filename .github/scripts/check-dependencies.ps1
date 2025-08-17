@@ -142,7 +142,7 @@ function Test-DotNetSDK {
             # Check available runtimes
             $runtimes = & dotnet --list-runtimes 2>$null | Out-String
             Write-Info "Available runtimes:"
-            Write-Host $runtimes
+            Write-Host "$runtimes"
             
         } else {
             Write-Error "❌ .NET SDK not found"

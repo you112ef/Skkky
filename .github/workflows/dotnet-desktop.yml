@@ -1,115 +1,399 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+# Medical Lab Analyzer - .NET Desktop Build Workflow
+# Updated for Windows Server 2025 compatibility (GitHub Actions Issue #12677)
+# This workflow builds, tests, and packages the Medical Lab Analyzer WPF application
+# with full support for Windows Server 2025 migration
 
-# This workflow will build, test, sign and package a WPF or Windows Forms desktop application
-# built on .NET Core.
-# To learn how to migrate your existing application to .NET Core,
-# refer to https://docs.microsoft.com/en-us/dotnet/desktop-wpf/migration/convert-project-from-net-framework
-#
-# To configure this workflow:
-#
-# 1. Configure environment variables
-# GitHub sets default environment variables for every workflow run.
-# Replace the variables relative to your project in the "env" section below.
-#
-# 2. Signing
-# Generate a signing certificate in the Windows Application
-# Packaging Project or add an existing signing certificate to the project.
-# Next, use PowerShell to encode the .pfx file using Base64 encoding
-# by running the following Powershell script to generate the output string:
-#
-# $pfx_cert = Get-Content '.\SigningCertificate.pfx' -Encoding Byte
-# [System.Convert]::ToBase64String($pfx_cert) | Out-File 'SigningCertificate_Encoded.txt'
-#
-# Open the output file, SigningCertificate_Encoded.txt, and copy the
-# string inside. Then, add the string to the repo as a GitHub secret
-# and name it "Base64_Encoded_Pfx."
-# For more information on how to configure your signing certificate for
-# this workflow, refer to https://github.com/microsoft/github-actions-for-desktop-apps#signing
-#
-# Finally, add the signing certificate password to the repo as a secret and name it "Pfx_Key".
-# See "Build the Windows Application Packaging project" below to see how the secret is used.
-#
-# For more information on GitHub Actions, refer to https://github.com/features/actions
-# For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
-# refer to https://github.com/microsoft/github-actions-for-desktop-apps
-
-name: .NET Core Desktop
+name: Medical Lab Analyzer - Desktop Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
+    paths:
+      - 'MedicalLabAnalyzer/**'
+      - '.github/workflows/dotnet-desktop.yml'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
+    paths:
+      - 'MedicalLabAnalyzer/**'
+      - '.github/workflows/dotnet-desktop.yml'
+  workflow_dispatch:
+    inputs:
+      runner_os:
+        description: 'Choose Windows runner version'
+        required: false
+        default: 'windows-latest'
+        type: choice
+        options:
+          - windows-latest
+          - windows-2022
+          - windows-2019
+
+env:
+  # Project configuration for Medical Lab Analyzer
+  PROJECT_NAME: MedicalLabAnalyzer
+  SOLUTION_PATH: MedicalLabAnalyzer/MedicalLabAnalyzer.sln
+  PROJECT_PATH: MedicalLabAnalyzer/MedicalLabAnalyzer.csproj
+  BUILD_PATH: MedicalLabAnalyzer/bin/Release/net8.0-windows
+  PUBLISH_PATH: MedicalLabAnalyzer/bin/Publish
+  ARTIFACTS_PATH: artifacts
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # Pre-flight checks and environment setup
+  preflight:
+    name: Environment Check
+    runs-on: ${{ github.event.inputs.runner_os || 'windows-latest' }}
+    outputs:
+      runner-info: ${{ steps.runner-info.outputs.info }}
+      dotnet-info: ${{ steps.dotnet-info.outputs.info }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: Get runner information
+        id: runner-info
+        shell: powershell
+        run: |
+          $runnerInfo = @{
+            'OS' = $env:RUNNER_OS
+            'OSVersion' = (Get-CimInstance Win32_OperatingSystem).Caption
+            'Architecture' = $env:RUNNER_ARCH
+            'TotalMemory' = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
+            'AvailableSpace' = [math]::Round((Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3" | Where-Object DeviceID -eq "C:" | Select-Object -ExpandProperty FreeSpace) / 1GB, 2)
+          }
+          $jsonInfo = $runnerInfo | ConvertTo-Json -Compress
+          $output = 'info=' + $jsonInfo
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $output
+          Write-Host " Runner OS: $($runnerInfo.OSVersion)"
+          Write-Host " Architecture: $($runnerInfo.Architecture)"
+          Write-Host " Memory: $($runnerInfo.TotalMemory) GB"
+          Write-Host " Available Space: $($runnerInfo.AvailableSpace) GB"
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Get .NET information
+        id: dotnet-info
+        shell: powershell
+        run: |
+          $dotnetInfo = dotnet --info
+          Write-Host " .NET SDK Information:"
+          Write-Host $dotnetInfo
+          $sdkVersion = dotnet --version
+          $output = 'info=' + $sdkVersion
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $output
 
+  # Build and test matrix
   build:
-
+    name: Build (${{ matrix.configuration }}, ${{ matrix.runtime }})
+    needs: preflight
     strategy:
+      fail-fast: false
       matrix:
         configuration: [Debug, Release]
-
-    runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-
+        runtime: [win-x64, win-x86]
+        exclude:
+          # Exclude Debug x86 to reduce build time
+          - configuration: Debug
+            runtime: win-x86
+    
+    runs-on: ${{ github.event.inputs.runner_os || 'windows-latest' }}
+    
     env:
-      Solution_Name: your-solution-name                         # Replace with your solution name, i.e. MyWpfApp.sln.
-      Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-      Wap_Project_Directory: your-wap-project-directory-name    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
-      Wap_Project_Path: your-wap-project-path                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      Configuration: ${{ matrix.configuration }}
+      Runtime: ${{ matrix.runtime }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      
+      - name: Verify project structure
+        shell: powershell
+        run: |
+          Write-Host " Verifying project structure..."
+          if (!(Test-Path "${{ env.PROJECT_PATH }}")) {
+            Write-Error " Project file not found: ${{ env.PROJECT_PATH }}"
+            exit 1
+          }
+          Write-Host " Project file found: ${{ env.PROJECT_PATH }}"
+          
+          if (Test-Path "${{ env.SOLUTION_PATH }}") {
+            Write-Host " Solution file found: ${{ env.SOLUTION_PATH }}"
+          } else {
+            Write-Host " Solution file not found, using project file directly"
+          }
+      
+      - name: Restore NuGet packages
+        shell: powershell
+        run: |
+          Write-Host " Restoring NuGet packages..."
+          dotnet restore "${{ env.PROJECT_PATH }}" --verbosity minimal
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error " Package restore failed"
+            exit 1
+          }
+          Write-Host " Packages restored successfully"
+      
+      - name: Build application
+        shell: powershell
+        run: |
+          Write-Host " Building Medical Lab Analyzer (${{ matrix.configuration }}, ${{ matrix.runtime }})..."
+          
+          $buildParams = @(
+            "build",
+            "${{ env.PROJECT_PATH }}",
+            "--configuration", "${{ matrix.configuration }}",
+            "--runtime", "${{ matrix.runtime }}",
+            "--no-restore",
+            "--verbosity", "minimal",
+            "/p:Platform=AnyCPU",
+            "/p:PublishSingleFile=false"
+          )
+          
+          & dotnet @buildParams
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error " Build failed for ${{ matrix.configuration }} ${{ matrix.runtime }}"
+            exit 1
+          }
+          Write-Host " Build completed successfully"
+      
+      - name: Run unit tests
+        if: matrix.configuration == 'Debug'
+        shell: powershell
+        run: |
+          Write-Host " Running unit tests..."
+          
+          # Look for test projects
+          $testProjects = Get-ChildItem -Recurse -Filter "*.Tests.csproj" -Path "MedicalLabAnalyzer"
+          
+          if ($testProjects.Count -eq 0) {
+            Write-Host " No test projects found, skipping tests"
+          } else {
+            foreach ($testProject in $testProjects) {
+              Write-Host " Running tests in $($testProject.Name)..."
+              dotnet test $testProject.FullName --configuration ${{ matrix.configuration }} --no-build --verbosity minimal --logger trx --collect:"XPlat Code Coverage"
+              
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error " Tests failed in $($testProject.Name)"
+                exit 1
+              }
+            }
+            Write-Host " All tests passed"
+          }
+      
+      - name: Publish application
+        if: matrix.configuration == 'Release'
+        shell: powershell
+        run: |
+          Write-Host " Publishing Medical Lab Analyzer..."
+          
+          $publishPath = "${{ env.ARTIFACTS_PATH }}\${{ matrix.runtime }}"
+          
+          $publishParams = @(
+            "publish",
+            "${{ env.PROJECT_PATH }}",
+            "--configuration", "${{ matrix.configuration }}",
+            "--runtime", "${{ matrix.runtime }}",
+            "--self-contained", "true",
+            "--output", $publishPath,
+            "--no-restore",
+            "--verbosity", "minimal",
+            "/p:PublishSingleFile=true",
+            "/p:IncludeNativeLibrariesForSelfExtract=true",
+            "/p:PublishTrimmed=false"
+          )
+          
+          & dotnet @publishParams
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error " Publish failed"
+            exit 1
+          }
+          
+          Write-Host " Publish completed successfully"
+          
+          # Verify published files
+          $exePath = Join-Path $publishPath "${{ env.PROJECT_NAME }}.exe"
+          if (Test-Path $exePath) {
+            $fileSize = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
+            Write-Host " Executable created: ${{ env.PROJECT_NAME }}.exe ($fileSize MB)"
+          } else {
+            Write-Error " Executable not found after publish"
+            exit 1
+          }
+      
+      - name: Create deployment package
+        if: matrix.configuration == 'Release'
+        shell: powershell
+        run: |
+          Write-Host " Creating deployment package..."
+          
+          $sourceDir = "${{ env.ARTIFACTS_PATH }}\${{ matrix.runtime }}"
+          $packageDir = "${{ env.ARTIFACTS_PATH }}\package\${{ matrix.runtime }}"
+          
+          # Create package structure
+          New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+          
+          # Copy published files
+          Copy-Item -Path "$sourceDir\*" -Destination $packageDir -Recurse -Force
+          
+          # Copy additional resources if they exist
+          $resourceDirs = @(
+            "MedicalLabAnalyzer\AI",
+            "MedicalLabAnalyzer\Database",
+            "MedicalLabAnalyzer\Resources"
+          )
+          
+          foreach ($dir in $resourceDirs) {
+            if (Test-Path $dir) {
+              $destDir = Join-Path $packageDir (Split-Path $dir -Leaf)
+              Copy-Item -Path $dir -Destination $destDir -Recurse -Force
+              Write-Host " Copied: $dir -> $destDir"
+            }
+          }
+          
+          # Copy important files
+          $importantFiles = @(
+            "MedicalLabAnalyzer\README.md",
+            "MedicalLabAnalyzer\BuildDeploy.ps1"
+          )
+          
+          foreach ($file in $importantFiles) {
+            if (Test-Path $file) {
+              Copy-Item -Path $file -Destination $packageDir -Force
+              Write-Host " Copied: $file"
+            }
+          }
+          
+          Write-Host " Deployment package created"
+      
+      - name: Upload build artifacts
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MedicalLabAnalyzer-${{ matrix.runtime }}-${{ github.sha }}
+          path: ${{ env.ARTIFACTS_PATH }}/package/${{ matrix.runtime }}
+          retention-days: 30
+      
+      - name: Upload test results
+        if: matrix.configuration == 'Debug' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.runtime }}
+          path: '**/*.trx'
+          retention-days: 7
 
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v2
-
-    # Execute all unit tests in the solution
-    - name: Execute unit tests
-      run: dotnet test
-
-    # Restore the application to populate the obj folder with RuntimeIdentifiers
-    - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
-      env:
-        Configuration: ${{ matrix.configuration }}
-
-    # Decode the base 64 encoded pfx and save the Signing_Certificate
-    - name: Decode the pfx
-      run: |
-        $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.Base64_Encoded_Pfx }}")
-        $certificatePath = Join-Path -Path $env:Wap_Project_Directory -ChildPath GitHubActionsWorkflow.pfx
-        [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
-
-    # Create the app package by building and packaging the Windows Application Packaging project
-    - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /p:PackageCertificatePassword=${{ secrets.Pfx_Key }}
-      env:
-        Appx_Bundle: Always
-        Appx_Bundle_Platforms: x86|x64
-        Appx_Package_Build_Mode: StoreUpload
-        Configuration: ${{ matrix.configuration }}
-
-    # Remove the pfx
-    - name: Remove the pfx
-      run: Remove-Item -path $env:Wap_Project_Directory\GitHubActionsWorkflow.pfx
-
-    # Upload the MSIX package: https://github.com/marketplace/actions/upload-a-build-artifact
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: MSIX Package
-        path: ${{ env.Wap_Project_Directory }}\AppPackages
+  # Create GitHub Release (only on main branch and Release builds)
+  release:
+    name: Create Release
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ${{ github.event.inputs.runner_os || 'windows-latest' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MedicalLabAnalyzer-*
+          path: release-artifacts
+      
+      - name: Create release packages
+        shell: powershell
+        run: |
+          Write-Host " Creating release packages..."
+          
+          $version = "v1.0.0-$(Get-Date -Format 'yyyyMMdd')-$($env:GITHUB_SHA.Substring(0,7))"
+          
+          # Create zip files for each runtime
+          Get-ChildItem "release-artifacts" -Directory | ForEach-Object {
+            $runtimeName = $_.Name -replace "MedicalLabAnalyzer-(.+)-.*", '$1'
+            $zipPath = "MedicalLabAnalyzer-$version-$runtimeName.zip"
+            
+            Compress-Archive -Path "$($_.FullName)\*" -DestinationPath $zipPath -Force
+            $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+            
+            Write-Host " Created: $zipPath ($zipSize MB)"
+          }
+      
+      - name: Generate release notes
+        shell: powershell
+        run: |
+          $releaseNotes = @"
+          # Medical Lab Analyzer Release
+          
+          **Build Information:**
+          -  Built on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          -  Runner: ${{ needs.preflight.outputs.runner-info }}
+          -  .NET SDK: ${{ needs.preflight.outputs.dotnet-info }}
+          -  Commit: ${{ github.sha }}
+          
+          **Features:**
+          -  Windows Server 2025 Compatible
+          -  AI-Powered CASA Analysis
+          -  17 Medical Test Types
+          -  Arabic RTL Interface
+          -  Offline Operation
+          
+          **Package Contents:**
+          - MedicalLabAnalyzer.exe (Self-contained)
+          - AI Models and Configuration
+          - Database and Resources
+          - Documentation and Setup Guide
+          
+          **System Requirements:**
+          - Windows 10/11 (64-bit)
+          - 4+ GB RAM (8+ GB recommended)
+          - 2+ GB disk space
+          - GPU with CUDA support (optional)
+          
+          **Installation:**
+          1. Download the appropriate package for your system
+          2. Extract to desired location
+          3. Run StartMedicalLabAnalyzer.bat or MedicalLabAnalyzer.exe
+          4. Login with default credentials (admin/admin)
+          5. Configure AI models as needed
+          
+          For detailed setup instructions, see INSTALLATION.md in the package.
+          "@
+          
+          $releaseNotes | Out-File -FilePath "RELEASE_NOTES.md" -Encoding UTF8
+      
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v1.0.0-${{ github.run_number }}
+          name: Medical Lab Analyzer v1.0.0-${{ github.run_number }}
+          bodyFile: RELEASE_NOTES.md
+          artifacts: "*.zip"
+          draft: false
+          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}

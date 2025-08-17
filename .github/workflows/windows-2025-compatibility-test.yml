@@ -113,7 +113,7 @@ jobs:
         id: system-info
         shell: powershell
         run: |
-          Write-Host "🔍 جمع معلومات النظام / Gathering system information"
+          Write-Host " جمع معلومات النظام / Gathering system information"
           
           $os = Get-CimInstance Win32_OperatingSystem
           $computer = Get-CimInstance Win32_ComputerSystem
@@ -149,15 +149,15 @@ jobs:
           
           # Check for Windows Server 2025 specific features
           if ($systemInfo.IsServer2025) {
-            Write-Host "🆕 Windows Server 2025 detected - running specific tests"
+            Write-Host " Windows Server 2025 detected - running specific tests"
             
             # Check D: drive availability
             if (!(Test-Path "D:\")) {
-              Write-Warning "⚠️ D: drive not available (expected on Server 2025)"
+              Write-Warning " D: drive not available (expected on Server 2025)"
               $driveOutput = 'd-drive-available=false'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             } else {
-              Write-Host "✅ D: drive available (unexpected on Server 2025)"
+              Write-Host " D: drive available (unexpected on Server 2025)"
               $driveOutput = 'd-drive-available=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             }
@@ -166,7 +166,7 @@ jobs:
       - name: Run dependency checks
         shell: powershell
         run: |
-          Write-Host "🔧 فحص التبعيات / Running dependency checks"
+          Write-Host " فحص التبعيات / Running dependency checks"
           
           # Check if our dependency check script exists
           if (Test-Path ".\.github\scripts\check-dependencies.ps1") {
@@ -187,14 +187,14 @@ jobs:
               try {
                 $version = & $checks[$name] 2>$null
                 if ($LASTEXITCODE -eq 0) {
-                  Write-Host "✅ $name`: $version"
+                  Write-Host " $name`: $version"
                   $results[$name] = @{ "Status" = "OK"; "Version" = $version }
                 } else {
-                  Write-Warning "⚠️ $name`: Command failed"
+                  Write-Warning " $name`: Command failed"
                   $results[$name] = @{ "Status" = "Failed"; "Error" = "Command execution failed" }
                 }
               } catch {
-                Write-Warning "⚠️ $name`: $($_.Exception.Message)"
+                Write-Warning " $name`: $($_.Exception.Message)"
                 $results[$name] = @{ "Status" = "Error"; "Error" = $_.Exception.Message }
               }
             }
@@ -212,7 +212,7 @@ jobs:
       - name: Verify .NET installation
         shell: powershell
         run: |
-          Write-Host "🔍 فحص .NET / Verifying .NET installation"
+          Write-Host " فحص .NET / Verifying .NET installation"
           
           try {
             $dotnetInfo = & dotnet --info 2>&1
@@ -229,16 +229,16 @@ jobs:
             
             # Check if .NET 8.0 is available
             if ($sdks -like "*8.*") {
-              Write-Host "✅ .NET 8.0 SDK found"
+              Write-Host " .NET 8.0 SDK found"
               $dotnetOutput = 'dotnet-8-available=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             } else {
-              Write-Warning "⚠️ .NET 8.0 SDK not found"
+              Write-Warning " .NET 8.0 SDK not found"
               $dotnetOutput = 'dotnet-8-available=false'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             }
           } catch {
-            Write-Error "❌ .NET check failed: $($_.Exception.Message)"
+            Write-Error " .NET check failed: $($_.Exception.Message)"
             $dotnetOutput = 'dotnet-8-available=false'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             exit 1
@@ -247,7 +247,7 @@ jobs:
       - name: Test workspace directory creation
         shell: powershell
         run: |
-          Write-Host "📁 اختبار إنشاء مساحة العمل / Testing workspace creation"
+          Write-Host " اختبار إنشاء مساحة العمل / Testing workspace creation"
           
           # Test D: drive availability and fallback to C:
           $workspaceDir = if (Test-Path "D:\") {
@@ -267,11 +267,11 @@ jobs:
             "Test content" | Out-File $testFile
             
             if (Test-Path $testFile) {
-              Write-Host "✅ Workspace operations successful"
+              Write-Host " Workspace operations successful"
               $workspaceOutput = 'workspace-test=passed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
             } else {
-              Write-Error "❌ File creation failed"
+              Write-Error " File creation failed"
               $workspaceOutput = 'workspace-test=failed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
             }
@@ -280,7 +280,7 @@ jobs:
             Remove-Item $workspaceDir -Recurse -Force -ErrorAction SilentlyContinue
             
           } catch {
-            Write-Error "❌ Workspace test failed: $($_.Exception.Message)"
+            Write-Error " Workspace test failed: $($_.Exception.Message)"
             $workspaceOutput = 'workspace-test=failed'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
           }
@@ -289,7 +289,7 @@ jobs:
         if: env.TEST_SCOPE != 'quick'
         shell: powershell
         run: |
-          Write-Host "🔨 اختبار بناء المشروع / Testing project build"
+          Write-Host " اختبار بناء المشروع / Testing project build"
           
           # Check if project exists
           if (Test-Path "${{ env.PROJECT_PATH }}\${{ env.PROJECT_PATH }}.csproj") {
@@ -312,19 +312,19 @@ jobs:
                 throw "Build failed"
               }
               
-              Write-Host "✅ Build successful"
+              Write-Host " Build successful"
               $buildOutput = 'build-test=passed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
               
             } catch {
-              Write-Error "❌ Build failed: $($_.Exception.Message)"
+              Write-Error " Build failed: $($_.Exception.Message)"
               $buildOutput = 'build-test=failed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
             } finally {
               Pop-Location
             }
           } else {
-            Write-Host "ℹ️ Project file not found, skipping build test"
+            Write-Host " Project file not found, skipping build test"
             $buildOutput = 'build-test=skipped'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
           }
@@ -333,7 +333,7 @@ jobs:
         if: env.TEST_SCOPE == 'full'
         shell: powershell
         run: |
-          Write-Host "🤖 اختبار متطلبات الذكاء الاصطناعي / Testing AI dependencies"
+          Write-Host " اختبار متطلبات الذكاء الاصطناعي / Testing AI dependencies"
           
           $aiPaths = @(
             "${{ env.PROJECT_PATH }}\AI\YOLOv8",
@@ -345,10 +345,10 @@ jobs:
           foreach ($path in $aiPaths) {
             $pathName = Split-Path $path -Leaf
             if (Test-Path $path) {
-              Write-Host "✅ AI path found: $pathName"
+              Write-Host " AI path found: $pathName"
               $aiTestResults[$pathName] = "Found"
             } else {
-              Write-Host "⚠️ AI path missing: $pathName"
+              Write-Host " AI path missing: $pathName"
               $aiTestResults[$pathName] = "Missing"
             }
           }
@@ -357,14 +357,14 @@ jobs:
           try {
             $gpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notlike "*Basic*" }
             if ($gpu) {
-              Write-Host "✅ GPU found: $($gpu[0].Name)"
+              Write-Host " GPU found: $($gpu[0].Name)"
               $aiTestResults["GPU"] = $gpu[0].Name
             } else {
-              Write-Host "ℹ️ No dedicated GPU found"
+              Write-Host " No dedicated GPU found"
               $aiTestResults["GPU"] = "None"
             }
           } catch {
-            Write-Host "⚠️ Could not check GPU"
+            Write-Host " Could not check GPU"
             $aiTestResults["GPU"] = "Unknown"
           }
           
@@ -377,7 +377,7 @@ jobs:
         id: performance
         shell: powershell
         run: |
-          Write-Host "📊 اختبار الأداء / Running performance benchmarks"
+          Write-Host " اختبار الأداء / Running performance benchmarks"
           
           $startTime = Get-Date
           
@@ -456,7 +456,7 @@ jobs:
         id: compatibility
         shell: powershell
         run: |
-          Write-Host "🔍 تقييم التوافق / Assessing compatibility"
+          Write-Host " تقييم التوافق / Assessing compatibility"
           
           $issues = @()
           $warnings = @()
@@ -493,11 +493,11 @@ jobs:
           Write-Host "Compatibility Status: $status"
           if ($issues.Count -gt 0) {
             Write-Host "Issues:"
-            $issues | ForEach-Object { Write-Host "  ❌ $_" }
+            $issues | ForEach-Object { Write-Host "   $_" }
           }
           if ($warnings.Count -gt 0) {
             Write-Host "Warnings:"
-            $warnings | ForEach-Object { Write-Host "  ⚠️ $_" }
+            $warnings | ForEach-Object { Write-Host "   $_" }
           }
           
           # Create compatibility report
@@ -547,7 +547,7 @@ jobs:
       - name: Generate compatibility report
         shell: bash
         run: |
-          echo "📊 إنتاج تقرير التوافق / Generating compatibility report"
+          echo " إنتاج تقرير التوافق / Generating compatibility report"
           
           # Create report directory
           mkdir -p compatibility-report
@@ -585,7 +585,7 @@ jobs:
           
           # Process test results
           echo "<div class='summary'>" >> compatibility-report/index.html
-          echo "<h2>📋 Test Summary / ملخص الاختبارات</h2>" >> compatibility-report/index.html
+          echo "<h2> Test Summary / ملخص الاختبارات</h2>" >> compatibility-report/index.html
           echo "<table>" >> compatibility-report/index.html
           echo "<tr><th>OS</th><th>Configuration</th><th>Status</th><th>Issues</th><th>Performance</th></tr>" >> compatibility-report/index.html
           
@@ -636,7 +636,7 @@ jobs:
           
           # Add summary statistics
           success_rate=$((compatible_tests * 100 / total_tests))
-          echo "<h3>📊 Statistics / الإحصائيات</h3>" >> compatibility-report/index.html
+          echo "<h3> Statistics / الإحصائيات</h3>" >> compatibility-report/index.html
           echo "<ul>" >> compatibility-report/index.html
           echo "<li>Total Tests: $total_tests</li>" >> compatibility-report/index.html
           echo "<li>Compatible: $compatible_tests</li>" >> compatibility-report/index.html
@@ -646,17 +646,17 @@ jobs:
           
           # Add recommendations
           echo "<div class='summary'>" >> compatibility-report/index.html
-          echo "<h2>💡 Recommendations / التوصيات</h2>" >> compatibility-report/index.html
+          echo "<h2> Recommendations / التوصيات</h2>" >> compatibility-report/index.html
           
           if [ $success_rate -ge 90 ]; then
-            echo "<p class='compatible'>✅ High compatibility rate. Ready for Windows Server 2025 migration.</p>" >> compatibility-report/index.html
-            echo "<p class='compatible'>✅ معدل توافق عالي. جاهز للترحيل إلى Windows Server 2025.</p>" >> compatibility-report/index.html
+            echo "<p class='compatible'> High compatibility rate. Ready for Windows Server 2025 migration.</p>" >> compatibility-report/index.html
+            echo "<p class='compatible'> معدل توافق عالي. جاهز للترحيل إلى Windows Server 2025.</p>" >> compatibility-report/index.html
           elif [ $success_rate -ge 70 ]; then
-            echo "<p class='partially-compatible'>⚠️ Moderate compatibility. Address identified issues before migration.</p>" >> compatibility-report/index.html
-            echo "<p class='partially-compatible'>⚠️ توافق متوسط. عالج المشاكل المحددة قبل الترحيل.</p>" >> compatibility-report/index.html
+            echo "<p class='partially-compatible'> Moderate compatibility. Address identified issues before migration.</p>" >> compatibility-report/index.html
+            echo "<p class='partially-compatible'> توافق متوسط. عالج المشاكل المحددة قبل الترحيل.</p>" >> compatibility-report/index.html
           else
-            echo "<p class='incompatible'>❌ Low compatibility. Significant work needed before migration.</p>" >> compatibility-report/index.html
-            echo "<p class='incompatible'>❌ توافق منخفض. مطلوب عمل كبير قبل الترحيل.</p>" >> compatibility-report/index.html
+            echo "<p class='incompatible'> Low compatibility. Significant work needed before migration.</p>" >> compatibility-report/index.html
+            echo "<p class='incompatible'> توافق منخفض. مطلوب عمل كبير قبل الترحيل.</p>" >> compatibility-report/index.html
           fi
           
           echo "</div>" >> compatibility-report/index.html
@@ -678,11 +678,11 @@ jobs:
           EOF
           
           if [ $success_rate -ge 90 ]; then
-            echo "✅ **HIGH COMPATIBILITY** - Ready for migration" >> compatibility-report/SUMMARY.md
+            echo " **HIGH COMPATIBILITY** - Ready for migration" >> compatibility-report/SUMMARY.md
           elif [ $success_rate -ge 70 ]; then
-            echo "⚠️ **MODERATE COMPATIBILITY** - Some issues to address" >> compatibility-report/SUMMARY.md
+            echo " **MODERATE COMPATIBILITY** - Some issues to address" >> compatibility-report/SUMMARY.md
           else
-            echo "❌ **LOW COMPATIBILITY** - Significant work needed" >> compatibility-report/SUMMARY.md
+            echo " **LOW COMPATIBILITY** - Significant work needed" >> compatibility-report/SUMMARY.md
           fi
           
           echo "" >> compatibility-report/SUMMARY.md
@@ -710,7 +710,7 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `## 🪟 Windows Server 2025 Compatibility Test Results\n\n${summary}\n\n📊 [View Full Report](../actions/runs/${{ github.run_id }})`
+                body: `## 🪟 Windows Server 2025 Compatibility Test Results\n\n${summary}\n\n [View Full Report](../actions/runs/${{ github.run_id }})`
               });
             }
 
@@ -724,14 +724,14 @@ jobs:
     steps:
       - name: Check overall results
         run: |
-          echo "🔍 Checking overall test results"
+          echo " Checking overall test results"
           
           # Check if any critical tests failed
           if echo '${{ toJson(needs.compatibility-test.result) }}' | grep -q "failure"; then
-            echo "❌ Some compatibility tests failed"
+            echo " Some compatibility tests failed"
             echo "OVERALL_STATUS=FAILED" >> $GITHUB_ENV
           else
-            echo "✅ All compatibility tests passed"
+            echo " All compatibility tests passed"
             echo "OVERALL_STATUS=PASSED" >> $GITHUB_ENV
           fi
       
@@ -749,24 +749,24 @@ jobs:
           
           # Add results for each OS tested
           if echo '${{ toJson(needs.compatibility-test.outputs) }}' | grep -q "windows-latest"; then
-            echo "| windows-latest (Server 2025) | ✅ Tested | Primary target for migration |" >> $GITHUB_STEP_SUMMARY
+            echo "| windows-latest (Server 2025) |  Tested | Primary target for migration |" >> $GITHUB_STEP_SUMMARY
           fi
           
           if echo '${{ toJson(needs.compatibility-test.outputs) }}' | grep -q "windows-2022"; then
-            echo "| windows-2022 | ✅ Tested | Current stable baseline |" >> $GITHUB_STEP_SUMMARY
+            echo "| windows-2022 |  Tested | Current stable baseline |" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📊 **Detailed Report**: Download the 'compatibility-report' artifact for complete analysis" >> $GITHUB_STEP_SUMMARY
+          echo " **Detailed Report**: Download the 'compatibility-report' artifact for complete analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ env.OVERALL_STATUS }}" = "PASSED" ]; then
-            echo "- ✅ All tests passed - ready for Windows Server 2025" >> $GITHUB_STEP_SUMMARY
+            echo "-  All tests passed - ready for Windows Server 2025" >> $GITHUB_STEP_SUMMARY
             echo "- 📝 Review performance benchmarks" >> $GITHUB_STEP_SUMMARY
-            echo "- 🚀 Consider enabling windows-latest in production workflows" >> $GITHUB_STEP_SUMMARY
+            echo "-  Consider enabling windows-latest in production workflows" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- ❌ Address failing tests before migration" >> $GITHUB_STEP_SUMMARY
-            echo "- 📋 Review detailed error logs" >> $GITHUB_STEP_SUMMARY
-            echo "- 🔧 Update code to handle Windows Server 2025 changes" >> $GITHUB_STEP_SUMMARY
+            echo "-  Address failing tests before migration" >> $GITHUB_STEP_SUMMARY
+            echo "-  Review detailed error logs" >> $GITHUB_STEP_SUMMARY
+            echo "-  Update code to handle Windows Server 2025 changes" >> $GITHUB_STEP_SUMMARY
           fi

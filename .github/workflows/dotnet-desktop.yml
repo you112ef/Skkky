@@ -69,10 +69,10 @@ jobs:
           $jsonInfo = $runnerInfo | ConvertTo-Json -Compress
           $output = 'info=' + $jsonInfo
           Add-Content -Path $env:GITHUB_OUTPUT -Value $output
-          Write-Host "🖥️ Runner OS: $($runnerInfo.OSVersion)"
-          Write-Host "🏗️ Architecture: $($runnerInfo.Architecture)"
-          Write-Host "💾 Memory: $($runnerInfo.TotalMemory) GB"
-          Write-Host "💽 Available Space: $($runnerInfo.AvailableSpace) GB"
+          Write-Host " Runner OS: $($runnerInfo.OSVersion)"
+          Write-Host " Architecture: $($runnerInfo.Architecture)"
+          Write-Host " Memory: $($runnerInfo.TotalMemory) GB"
+          Write-Host " Available Space: $($runnerInfo.AvailableSpace) GB"
       
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -84,7 +84,7 @@ jobs:
         shell: powershell
         run: |
           $dotnetInfo = dotnet --info
-          Write-Host "📦 .NET SDK Information:"
+          Write-Host " .NET SDK Information:"
           Write-Host $dotnetInfo
           $sdkVersion = dotnet --version
           $output = 'info=' + $sdkVersion
@@ -135,34 +135,34 @@ jobs:
       - name: Verify project structure
         shell: powershell
         run: |
-          Write-Host "📁 Verifying project structure..."
+          Write-Host " Verifying project structure..."
           if (!(Test-Path "${{ env.PROJECT_PATH }}")) {
-            Write-Error "❌ Project file not found: ${{ env.PROJECT_PATH }}"
+            Write-Error " Project file not found: ${{ env.PROJECT_PATH }}"
             exit 1
           }
-          Write-Host "✅ Project file found: ${{ env.PROJECT_PATH }}"
+          Write-Host " Project file found: ${{ env.PROJECT_PATH }}"
           
           if (Test-Path "${{ env.SOLUTION_PATH }}") {
-            Write-Host "✅ Solution file found: ${{ env.SOLUTION_PATH }}"
+            Write-Host " Solution file found: ${{ env.SOLUTION_PATH }}"
           } else {
-            Write-Host "⚠️ Solution file not found, using project file directly"
+            Write-Host " Solution file not found, using project file directly"
           }
       
       - name: Restore NuGet packages
         shell: powershell
         run: |
-          Write-Host "📦 Restoring NuGet packages..."
+          Write-Host " Restoring NuGet packages..."
           dotnet restore "${{ env.PROJECT_PATH }}" --verbosity minimal
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Package restore failed"
+            Write-Error " Package restore failed"
             exit 1
           }
-          Write-Host "✅ Packages restored successfully"
+          Write-Host " Packages restored successfully"
       
       - name: Build application
         shell: powershell
         run: |
-          Write-Host "🔨 Building Medical Lab Analyzer (${{ matrix.configuration }}, ${{ matrix.runtime }})..."
+          Write-Host " Building Medical Lab Analyzer (${{ matrix.configuration }}, ${{ matrix.runtime }})..."
           
           $buildParams = @(
             "build",
@@ -178,40 +178,40 @@ jobs:
           & dotnet @buildParams
           
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Build failed for ${{ matrix.configuration }} ${{ matrix.runtime }}"
+            Write-Error " Build failed for ${{ matrix.configuration }} ${{ matrix.runtime }}"
             exit 1
           }
-          Write-Host "✅ Build completed successfully"
+          Write-Host " Build completed successfully"
       
       - name: Run unit tests
         if: matrix.configuration == 'Debug'
         shell: powershell
         run: |
-          Write-Host "🧪 Running unit tests..."
+          Write-Host " Running unit tests..."
           
           # Look for test projects
           $testProjects = Get-ChildItem -Recurse -Filter "*.Tests.csproj" -Path "MedicalLabAnalyzer"
           
           if ($testProjects.Count -eq 0) {
-            Write-Host "⚠️ No test projects found, skipping tests"
+            Write-Host " No test projects found, skipping tests"
           } else {
             foreach ($testProject in $testProjects) {
-              Write-Host "🧪 Running tests in $($testProject.Name)..."
+              Write-Host " Running tests in $($testProject.Name)..."
               dotnet test $testProject.FullName --configuration ${{ matrix.configuration }} --no-build --verbosity minimal --logger trx --collect:"XPlat Code Coverage"
               
               if ($LASTEXITCODE -ne 0) {
-                Write-Error "❌ Tests failed in $($testProject.Name)"
+                Write-Error " Tests failed in $($testProject.Name)"
                 exit 1
               }
             }
-            Write-Host "✅ All tests passed"
+            Write-Host " All tests passed"
           }
       
       - name: Publish application
         if: matrix.configuration == 'Release'
         shell: powershell
         run: |
-          Write-Host "📦 Publishing Medical Lab Analyzer..."
+          Write-Host " Publishing Medical Lab Analyzer..."
           
           $publishPath = "${{ env.ARTIFACTS_PATH }}\${{ matrix.runtime }}"
           
@@ -232,19 +232,19 @@ jobs:
           & dotnet @publishParams
           
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Publish failed"
+            Write-Error " Publish failed"
             exit 1
           }
           
-          Write-Host "✅ Publish completed successfully"
+          Write-Host " Publish completed successfully"
           
           # Verify published files
           $exePath = Join-Path $publishPath "${{ env.PROJECT_NAME }}.exe"
           if (Test-Path $exePath) {
             $fileSize = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
-            Write-Host "✅ Executable created: ${{ env.PROJECT_NAME }}.exe ($fileSize MB)"
+            Write-Host " Executable created: ${{ env.PROJECT_NAME }}.exe ($fileSize MB)"
           } else {
-            Write-Error "❌ Executable not found after publish"
+            Write-Error " Executable not found after publish"
             exit 1
           }
       
@@ -252,7 +252,7 @@ jobs:
         if: matrix.configuration == 'Release'
         shell: powershell
         run: |
-          Write-Host "📦 Creating deployment package..."
+          Write-Host " Creating deployment package..."
           
           $sourceDir = "${{ env.ARTIFACTS_PATH }}\${{ matrix.runtime }}"
           $packageDir = "${{ env.ARTIFACTS_PATH }}\package\${{ matrix.runtime }}"
@@ -274,7 +274,7 @@ jobs:
             if (Test-Path $dir) {
               $destDir = Join-Path $packageDir (Split-Path $dir -Leaf)
               Copy-Item -Path $dir -Destination $destDir -Recurse -Force
-              Write-Host "✅ Copied: $dir -> $destDir"
+              Write-Host " Copied: $dir -> $destDir"
             }
           }
           
@@ -287,11 +287,11 @@ jobs:
           foreach ($file in $importantFiles) {
             if (Test-Path $file) {
               Copy-Item -Path $file -Destination $packageDir -Force
-              Write-Host "✅ Copied: $file"
+              Write-Host " Copied: $file"
             }
           }
           
-          Write-Host "✅ Deployment package created"
+          Write-Host " Deployment package created"
       
       - name: Upload build artifacts
         if: matrix.configuration == 'Release'
@@ -329,7 +329,7 @@ jobs:
       - name: Create release packages
         shell: powershell
         run: |
-          Write-Host "📦 Creating release packages..."
+          Write-Host " Creating release packages..."
           
           $version = "v1.0.0-$(Get-Date -Format 'yyyyMMdd')-$($env:GITHUB_SHA.Substring(0,7))"
           
@@ -341,7 +341,7 @@ jobs:
             Compress-Archive -Path "$($_.FullName)\*" -DestinationPath $zipPath -Force
             $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
             
-            Write-Host "✅ Created: $zipPath ($zipSize MB)"
+            Write-Host " Created: $zipPath ($zipSize MB)"
           }
       
       - name: Generate release notes
@@ -351,17 +351,17 @@ jobs:
           # Medical Lab Analyzer Release
           
           **Build Information:**
-          - 🏗️ Built on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
-          - 🖥️ Runner: ${{ needs.preflight.outputs.runner-info }}
-          - 📦 .NET SDK: ${{ needs.preflight.outputs.dotnet-info }}
-          - 📋 Commit: ${{ github.sha }}
+          -  Built on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          -  Runner: ${{ needs.preflight.outputs.runner-info }}
+          -  .NET SDK: ${{ needs.preflight.outputs.dotnet-info }}
+          -  Commit: ${{ github.sha }}
           
           **Features:**
-          - ✅ Windows Server 2025 Compatible
-          - ✅ AI-Powered CASA Analysis
-          - ✅ 17 Medical Test Types
-          - ✅ Arabic RTL Interface
-          - ✅ Offline Operation
+          -  Windows Server 2025 Compatible
+          -  AI-Powered CASA Analysis
+          -  17 Medical Test Types
+          -  Arabic RTL Interface
+          -  Offline Operation
           
           **Package Contents:**
           - MedicalLabAnalyzer.exe (Self-contained)

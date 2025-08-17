@@ -113,7 +113,7 @@ jobs:
         id: system-info
         shell: powershell
         run: |
-          Write-Host " جمع معلومات النظام / Gathering system information"
+          Write-Host " Gathering system information
           
           $os = Get-CimInstance Win32_OperatingSystem
           $computer = Get-CimInstance Win32_ComputerSystem
@@ -166,7 +166,7 @@ jobs:
       - name: Run dependency checks
         shell: powershell
         run: |
-          Write-Host " فحص التبعيات / Running dependency checks"
+          Write-Host " Running dependency checks
           
           # Check if our dependency check script exists
           if (Test-Path ".\.github\scripts\check-dependencies.ps1") {
@@ -379,7 +379,7 @@ jobs:
         id: performance
         shell: powershell
         run: |
-          Write-Host " اختبار الأداء / Running performance benchmarks"
+          Write-Host " Running performance benchmarks
           
           $startTime = Get-Date
           
@@ -579,7 +579,7 @@ jobs:
           </head>
           <body>
               <div class="header">
-                  <h1>🪟 Windows Server 2025 Compatibility Report</h1>
+                  <h1> Windows Server 2025 Compatibility Report</h1>
                   <h2>تقرير التوافق مع Windows Server 2025</h2>
                   <p>Generated: $(date)</p>
                   <p>Repository: ${{ github.repository }}</p>
@@ -714,7 +714,7 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `## 🪟 Windows Server 2025 Compatibility Test Results\n\n${summary}\n\n [View Full Report](../actions/runs/${{ github.run_id }})`
+                body: `##  Windows Server 2025 Compatibility Test Results\n\n${summary}\n\n [View Full Report](../actions/runs/${{ github.run_id }})`
               });
             }
 
@@ -741,7 +741,7 @@ jobs:
       
       - name: Set job summary
         run: |
-          echo "## 🪟 Windows Server 2025 Compatibility Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "##  Windows Server 2025 Compatibility Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Status**: ${{ env.OVERALL_STATUS }}" >> $GITHUB_STEP_SUMMARY
           echo "**Test Scope**: ${{ env.TEST_SCOPE }}" >> $GITHUB_STEP_SUMMARY
@@ -767,7 +767,7 @@ jobs:
           
           if [ "${{ env.OVERALL_STATUS }}" = "PASSED" ]; then
             echo "-  All tests passed - ready for Windows Server 2025" >> $GITHUB_STEP_SUMMARY
-            echo "- 📝 Review performance benchmarks" >> $GITHUB_STEP_SUMMARY
+            echo "-  Review performance benchmarks" >> $GITHUB_STEP_SUMMARY
             echo "-  Consider enabling windows-latest in production workflows" >> $GITHUB_STEP_SUMMARY
           else
             echo "-  Address failing tests before migration" >> $GITHUB_STEP_SUMMARY

@@ -278,7 +278,7 @@ jobs:
           
           $functionAppUrl = "https://${{ needs.validate.outputs.function-app-name }}.azurewebsites.net"
           
-          Write-Host "🌐 Function App URL: $functionAppUrl"
+          Write-Host " Function App URL: $functionAppUrl"
           Write-Host " Checking health endpoint..."
           
           try {
@@ -321,7 +321,7 @@ jobs:
           -  Secure Azure Deployment
           
           **Access:**
-          - 🌐 Function App: https://${{ needs.validate.outputs.function-app-name }}.azurewebsites.net
+          -  Function App: https://${{ needs.validate.outputs.function-app-name }}.azurewebsites.net
           -  Azure Portal: https://portal.azure.com/#@/resource/subscriptions/.../resourceGroups/.../providers/Microsoft.Web/sites/${{ needs.validate.outputs.function-app-name }}
           
           "@

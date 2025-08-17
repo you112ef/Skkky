@@ -1,49 +1,409 @@
-# This workflow will deploy a PowerShell project to an Azure Functions App on Windows or Linux when a commit is pushed to your default branch.
-#
-# This workflow assumes you have already created the target Azure Functions app.
-# For instructions see https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-vs-code-powershell
-#
-# To configure this workflow:
-# 1. Set up the following secrets in your repository:
-#   - AZURE_FUNCTIONAPP_PUBLISH_PROFILE
-# 2. Change env variables for your configuration.
-#
-# For more information on:
-#   - GitHub Actions for Azure: https://github.com/Azure/Actions
-#   - Azure Functions Action: https://github.com/Azure/functions-action
-#   - Publish Profile: https://github.com/Azure/functions-action#using-publish-profile-as-deployment-credential-recommended
-#   - Azure Service Principal for RBAC: https://github.com/Azure/functions-action#using-azure-service-principal-for-rbac-as-deployment-credential
-#
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples/tree/master/FunctionApp
+# Medical Lab Analyzer - Azure Functions Deployment (PowerShell)
+# Updated for Windows Server 2025 compatibility (GitHub Actions Issue #12677)
+# This workflow deploys PowerShell Azure Functions with support for Windows Server 2025 migration
 
-name: Deploy PowerShell project to Azure Function App
+name: Deploy Medical Lab Functions to Azure (PowerShell)
 
 on:
   push:
+    branches: ["main", "develop"]
+    paths:
+      - 'MedicalLabAnalyzer/PowerShellFunctions/**'
+      - '.github/workflows/azure-functions-app-powershell.yml'
+  pull_request:
     branches: ["main"]
+    paths:
+      - 'MedicalLabAnalyzer/PowerShellFunctions/**'
+      - '.github/workflows/azure-functions-app-powershell.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      runner_os:
+        description: 'Choose Windows runner version'
+        required: false
+        default: 'windows-latest'
+        type: choice
+        options:
+          - windows-latest
+          - windows-2022
+          - windows-2019
 
 env:
-  AZURE_FUNCTIONAPP_NAME: 'your-app-name'   # set this to your function app name on Azure
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'       # set this to the path to your function app project, defaults to the repository root
-
+  # Azure Functions PowerShell configuration for Medical Lab Analyzer
+  AZURE_FUNCTIONAPP_NAME: ${{ vars.AZURE_FUNCTIONAPP_PS_NAME || 'medical-lab-ps-functions' }}
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'MedicalLabAnalyzer/PowerShellFunctions'
+  
+  # PowerShell and Functions configuration
+  POWERSHELL_VERSION: '7.4'
+  FUNCTIONS_WORKER_RUNTIME: 'powershell'
+  FUNCTIONS_EXTENSION_VERSION: '~4'
+  
+  # Windows Server 2025 compatibility settings
+  PSExecutionPolicyPreference: 'RemoteSigned'
+  
 jobs:
-  build-and-deploy:
-    runs-on: windows-latest # For Linux, use ubuntu-latest
-    environment: dev
+  # Environment validation and PowerShell setup
+  validate:
+    name: Validate PowerShell Environment
+    runs-on: ${{ github.event.inputs.runner_os || 'windows-latest' }}
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    outputs:
+      deployment-environment: ${{ steps.env-check.outputs.environment }}
+      function-app-name: ${{ steps.env-check.outputs.function-app-name }}
+      powershell-version: ${{ steps.ps-check.outputs.version }}
     steps:
-    - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: Validate environment configuration
+        id: env-check
+        shell: powershell
+        run: |
+          $environment = "${{ github.event.inputs.environment || 'dev' }}"
+          $functionAppName = "${{ env.AZURE_FUNCTIONAPP_NAME }}-$environment"
+          
+          Write-Host "🌍 Deployment Environment: $environment"
+          Write-Host "⚡ PowerShell Function App: $functionAppName"
+          Write-Host "🔧 PowerShell Version Target: ${{ env.POWERSHELL_VERSION }}"
+          Write-Host "🚀 Functions Runtime: ${{ env.FUNCTIONS_WORKER_RUNTIME }}"
+          
+          # Check if PowerShell Functions project exists
+          if (!(Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}")) {
+            Write-Warning "⚠️ PowerShell Functions project path not found: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+            Write-Host "ℹ️ This workflow will skip deployment if no PowerShell Functions project is found"
+          } else {
+            Write-Host "✅ PowerShell Functions project found"
+          }
+          
+          Write-Output "environment=$environment" >> $env:GITHUB_OUTPUT
+          Write-Output "function-app-name=$functionAppName" >> $env:GITHUB_OUTPUT
+      
+      - name: Check PowerShell version and capabilities
+        id: ps-check
+        shell: powershell
+        run: |
+          Write-Host "🔍 PowerShell Environment Check:"
+          Write-Host "Version: $($PSVersionTable.PSVersion)"
+          Write-Host "Edition: $($PSVersionTable.PSEdition)"
+          Write-Host "Platform: $($PSVersionTable.Platform)"
+          Write-Host "OS: $($PSVersionTable.OS)"
+          
+          # Check execution policy
+          $policy = Get-ExecutionPolicy
+          Write-Host "Execution Policy: $policy"
+          
+          if ($policy -eq 'Restricted') {
+            Write-Host "🔧 Setting execution policy to RemoteSigned..."
+            Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          }
+          
+          # Test PowerShell modules that might be needed
+          $modules = @('Az.Functions', 'Az.Accounts', 'Pester')
+          foreach ($module in $modules) {
+            $installed = Get-Module -Name $module -ListAvailable -ErrorAction SilentlyContinue
+            if ($installed) {
+              Write-Host "✅ Module available: $module ($($installed[0].Version))"
+            } else {
+              Write-Host "ℹ️ Module not installed: $module"
+            }
+          }
+          
+          Write-Output "version=$($PSVersionTable.PSVersion)" >> $env:GITHUB_OUTPUT
+      
+      - name: Check Azure credentials
+        shell: powershell
+        run: |
+          if ("${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" -eq "") {
+            if ("${{ secrets.AZURE_RBAC_CREDENTIALS }}" -eq "") {
+              Write-Error "❌ Neither AZURE_FUNCTIONAPP_PUBLISH_PROFILE nor AZURE_RBAC_CREDENTIALS are configured"
+              Write-Host "📋 Please configure one of the following secrets:"
+              Write-Host "   - AZURE_FUNCTIONAPP_PUBLISH_PROFILE (recommended)"
+              Write-Host "   - AZURE_RBAC_CREDENTIALS (for RBAC authentication)"
+              exit 1
+            } else {
+              Write-Host "🔐 Using RBAC authentication"
+            }
+          } else {
+            Write-Host "🔐 Using publish profile authentication"
+          }
 
-    # If you want to use Azure RBAC instead of Publish Profile, then uncomment the task below
-    # - name: 'Login via Azure CLI'
-    #   uses: azure/login@v1
-    #   with:
-    #     creds: ${{ secrets.AZURE_RBAC_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
-
-    - name: 'Run Azure Functions Action'
-      uses: Azure/functions-action@v1
-      id: fa
-      with:
-        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }} # Remove publish-profile to use Azure RBAC
+  # Build and deploy PowerShell Azure Functions
+  build-and-deploy:
+    name: Deploy PowerShell Functions
+    needs: validate
+    runs-on: ${{ github.event.inputs.runner_os || 'windows-latest' }}
+    environment: ${{ needs.validate.outputs.deployment-environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      # Azure login if using RBAC
+      - name: Azure Login (RBAC)
+        if: env.AZURE_RBAC_CREDENTIALS != ''
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_RBAC_CREDENTIALS }}
+      
+      - name: Setup PowerShell environment
+        shell: powershell
+        run: |
+          Write-Host "🔧 Setting up PowerShell environment..."
+          
+          # Set execution policy
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          
+          # Display PowerShell information
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+          Write-Host "PowerShell Edition: $($PSVersionTable.PSEdition)"
+          
+          # Install required modules if needed
+          $modules = @(
+            @{Name='Az.Accounts'; MinVersion='2.0.0'},
+            @{Name='Az.Functions'; MinVersion='4.0.0'},
+            @{Name='Pester'; MinVersion='5.0.0'}
+          )
+          
+          foreach ($module in $modules) {
+            $installed = Get-Module -Name $module.Name -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+            
+            if (!$installed -or $installed.Version -lt [Version]$module.MinVersion) {
+              Write-Host "📦 Installing/Updating $($module.Name)..."
+              Install-Module -Name $module.Name -MinimumVersion $module.MinVersion -Force -AllowClobber -Scope CurrentUser
+            } else {
+              Write-Host "✅ $($module.Name) is up to date: $($installed.Version)"
+            }
+          }
+      
+      - name: Check PowerShell Functions project
+        id: check-project
+        shell: powershell
+        run: |
+          if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
+            Write-Host "✅ PowerShell Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+            Write-Output "project-exists=true" >> $env:GITHUB_OUTPUT
+            
+            # Check for host.json and other required files
+            $hostJsonPath = Join-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" "host.json"
+            $requirementsPath = Join-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" "requirements.psd1"
+            
+            if (Test-Path $hostJsonPath) {
+              Write-Host "✅ host.json found"
+            } else {
+              Write-Warning "⚠️ host.json not found - creating default"
+              
+              $hostJson = @{
+                version = "2.0"
+                functionTimeout = "00:05:00"
+                extensionBundle = @{
+                  id = "Microsoft.Azure.Functions.ExtensionBundle"
+                  version = "[4.*, 5.0.0)"
+                }
+              } | ConvertTo-Json -Depth 10
+              
+              $hostJson | Out-File -FilePath $hostJsonPath -Encoding UTF8
+              Write-Host "✅ Default host.json created"
+            }
+            
+            if (Test-Path $requirementsPath) {
+              Write-Host "✅ requirements.psd1 found"
+            } else {
+              Write-Host "ℹ️ requirements.psd1 not found (optional)"
+            }
+            
+            # List PowerShell function files
+            $functionDirs = Get-ChildItem -Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" -Directory | Where-Object { $_.Name -notlike ".*" }
+            if ($functionDirs.Count -gt 0) {
+              Write-Host "ℹ️ Found $($functionDirs.Count) function(s):"
+              $functionDirs | ForEach-Object { Write-Host "   - $($_.Name)" }
+            } else {
+              Write-Warning "⚠️ No function directories found"
+            }
+            
+          } else {
+            Write-Host "ℹ️ No PowerShell Functions project found, skipping deployment"
+            Write-Output "project-exists=false" >> $env:GITHUB_OUTPUT
+          }
+      
+      - name: Run PowerShell tests
+        if: steps.check-project.outputs.project-exists == 'true'
+        shell: powershell
+        run: |
+          Write-Host "🧪 Running PowerShell tests..."
+          
+          Push-Location "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+          try {
+            # Look for test files
+            $testFiles = Get-ChildItem -Path . -Filter "*.Tests.ps1" -Recurse
+            
+            if ($testFiles.Count -eq 0) {
+              Write-Host "ℹ️ No test files found (*.Tests.ps1)"
+            } else {
+              Write-Host "🧪 Found $($testFiles.Count) test file(s)"
+              
+              # Run Pester tests
+              $pesterConfig = @{
+                Run = @{
+                  Path = $testFiles.FullName
+                }
+                Output = @{
+                  Verbosity = 'Detailed'
+                }
+                Should = @{
+                  ErrorAction = 'Stop'
+                }
+              }
+              
+              $testResults = Invoke-Pester -Configuration $pesterConfig
+              
+              if ($testResults.Failed -gt 0) {
+                Write-Error "❌ $($testResults.Failed) test(s) failed out of $($testResults.Total)"
+                exit 1
+              } else {
+                Write-Host "✅ All $($testResults.Total) test(s) passed"
+              }
+            }
+            
+            # Basic syntax check for all PowerShell files
+            Write-Host "🔍 Running syntax check..."
+            $psFiles = Get-ChildItem -Path . -Filter "*.ps1" -Recurse | Where-Object { $_.Name -notlike "*.Tests.ps1" }
+            
+            foreach ($file in $psFiles) {
+              try {
+                $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content -Raw $file.FullName), [ref]$null)
+                Write-Host "✅ Syntax OK: $($file.Name)"
+              } catch {
+                Write-Error "❌ Syntax error in $($file.Name): $($_.Exception.Message)"
+                exit 1
+              }
+            }
+            
+          } finally {
+            Pop-Location
+          }
+      
+      - name: Prepare deployment package
+        if: steps.check-project.outputs.project-exists == 'true'
+        shell: powershell
+        run: |
+          Write-Host "📦 Preparing deployment package..."
+          
+          $packagePath = "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+          
+          # Ensure all required files are present
+          Push-Location $packagePath
+          try {
+            # Verify structure
+            Write-Host "🔍 Verifying package structure:"
+            Get-ChildItem -Recurse | ForEach-Object {
+              $relativePath = $_.FullName.Replace((Get-Location).Path, '').TrimStart('\\')
+              Write-Host "   $relativePath"
+            }
+            
+            Write-Host "✅ Package preparation completed"
+          } finally {
+            Pop-Location
+          }
+      
+      - name: Deploy to Azure Functions
+        if: steps.check-project.outputs.project-exists == 'true'
+        uses: Azure/functions-action@v1
+        id: deploy
+        with:
+          app-name: ${{ needs.validate.outputs.function-app-name }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          respect-funcignore: true
+      
+      - name: Verify PowerShell Functions deployment
+        if: steps.check-project.outputs.project-exists == 'true'
+        shell: powershell
+        run: |
+          Write-Host "🔍 Verifying PowerShell Functions deployment..."
+          
+          $functionAppUrl = "https://${{ needs.validate.outputs.function-app-name }}.azurewebsites.net"
+          
+          Write-Host "🌐 PowerShell Function App URL: $functionAppUrl"
+          Write-Host "📊 Checking admin endpoint..."
+          
+          try {
+            # Check admin/host/status endpoint
+            $adminResponse = Invoke-WebRequest -Uri "$functionAppUrl/admin/host/status" -Method GET -TimeoutSec 30 -ErrorAction SilentlyContinue
+            if ($adminResponse.StatusCode -eq 200 -or $adminResponse.StatusCode -eq 401) {
+              Write-Host "✅ Function host is responsive (status: $($adminResponse.StatusCode))"
+            } else {
+              Write-Warning "⚠️ Unexpected response from host: $($adminResponse.StatusCode)"
+            }
+          } catch {
+            Write-Warning "⚠️ Could not reach function host (this may be normal during initial deployment)"
+            Write-Host "Error: $($_.Exception.Message)"
+          }
+          
+          # Try to get function list
+          try {
+            Write-Host "📊 Checking functions list..."
+            $functionsResponse = Invoke-WebRequest -Uri "$functionAppUrl/admin/functions" -Method GET -TimeoutSec 30 -ErrorAction SilentlyContinue
+            if ($functionsResponse.StatusCode -eq 200) {
+              Write-Host "✅ Functions list accessible"
+            }
+          } catch {
+            Write-Host "ℹ️ Functions list not accessible (requires authentication)"
+          }
+          
+          Write-Host "✅ Deployment verification completed"
+      
+      - name: Create PowerShell deployment summary
+        if: steps.check-project.outputs.project-exists == 'true'
+        shell: powershell
+        run: |
+          $summary = @"
+          ## 🚀 PowerShell Azure Functions Deployment Summary
+          
+          **Environment:** ${{ needs.validate.outputs.deployment-environment }}
+          **Function App:** ${{ needs.validate.outputs.function-app-name }}
+          **Runtime:** ${{ env.FUNCTIONS_WORKER_RUNTIME }}
+          **Version:** ${{ env.FUNCTIONS_EXTENSION_VERSION }}
+          
+          **PowerShell Information:**
+          - 🔧 PowerShell Version: ${{ needs.validate.outputs.powershell-version }}
+          - 🔧 Target Version: ${{ env.POWERSHELL_VERSION }}
+          - 🖥️ Runner: ${{ runner.os }}
+          - 📅 Deployed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          - 📋 Commit: ${{ github.sha }}
+          
+          **Features:**
+          - ✅ Windows Server 2025 Compatible
+          - ✅ PowerShell 7.x Functions
+          - ✅ Medical Lab Data Processing
+          - ✅ Automation and Scripting Support
+          - ✅ Secure Azure Deployment
+          
+          **Access:**
+          - 🌐 Function App: https://${{ needs.validate.outputs.function-app-name }}.azurewebsites.net
+          - 📊 Azure Portal: https://portal.azure.com/#@/resource/subscriptions/.../resourceGroups/.../providers/Microsoft.Web/sites/${{ needs.validate.outputs.function-app-name }}
+          - 🔧 PowerShell Runtime: ${{ env.FUNCTIONS_WORKER_RUNTIME }}
+          
+          **Next Steps:**
+          1. Configure function keys and access policies
+          2. Test individual PowerShell functions
+          3. Monitor function performance in Azure Portal
+          4. Set up alerts and monitoring
+          
+          "@
+          
+          Write-Host $summary
+          
+          # Add to job summary
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8

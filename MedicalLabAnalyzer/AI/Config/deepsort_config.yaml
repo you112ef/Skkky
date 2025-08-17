@@ -1,0 +1,100 @@
+# DeepSORT Configuration for Sperm Tracking
+# This configuration defines the DeepSORT tracker settings for CASA analysis
+
+tracker_config:
+  # Model file path for feature extraction
+  model_path: "deep_sort_features.onnx"
+  
+  # Maximum distance threshold for association
+  max_dist: 0.2
+  
+  # Minimum confidence threshold for detections
+  min_confidence: 0.3
+  
+  # Non-Maximum Suppression threshold
+  nms_max_overlap: 1.0
+  
+  # Maximum number of frames to keep a track without detection
+  max_iou_distance: 0.7
+  
+  # Maximum age of track (frames) before deletion
+  max_age: 30
+  
+  # Minimum number of detections to initialize a track
+  n_init: 3
+  
+  # Number of frames to keep track history
+  nn_budget: 100
+
+# Feature Extraction Settings
+feature_extraction:
+  # Input size for feature extraction model
+  input_size: [64, 128]
+  
+  # Feature vector dimension
+  feature_dim: 512
+  
+  # Batch size for feature extraction
+  batch_size: 32
+
+# CASA Tracking Specific Settings
+casa_tracking:
+  # Minimum track length for velocity calculation (frames)
+  min_track_length_for_velocity: 5
+  
+  # Maximum allowed velocity (μm/s) to filter out noise
+  max_velocity: 200.0
+  
+  # Smoothing window size for velocity calculation
+  velocity_smoothing_window: 3
+  
+  # Maximum distance between consecutive detections (pixels)
+  max_distance_between_detections: 50
+  
+  # Track quality threshold (0-1)
+  track_quality_threshold: 0.7
+
+# Motion Analysis Parameters
+motion_analysis:
+  # Frame interval for velocity calculation
+  frame_interval: 1
+  
+  # Time window for average path velocity (seconds)
+  path_velocity_window: 1.0
+  
+  # Minimum path length for linearity calculation (μm)
+  min_path_length: 5.0
+  
+  # Frequency analysis parameters for BCF calculation
+  bcf_analysis:
+    window_size: 25  # frames
+    overlap: 50      # percentage
+    min_frequency: 1 # Hz
+    max_frequency: 20 # Hz
+
+# Output Settings
+output:
+  # Save tracking results to file
+  save_tracks: true
+  
+  # Generate motion heatmaps
+  generate_heatmaps: true
+  
+  # Export trajectory data
+  export_trajectories: true
+  
+  # Video output with tracking overlay
+  save_tracking_video: true
+
+# Model Download Information
+model_info:
+  download_url: "https://github.com/nwojke/deep_sort/releases"
+  custom_model_note: |
+    For optimal sperm tracking, consider training a custom feature extraction model
+    on sperm microscopy data. The default pedestrian model may not perform optimally.
+  
+  requirements: |
+    - TensorFlow or PyTorch for model inference
+    - OpenCV for image processing
+    - NumPy for numerical computations
+    - SciPy for signal processing (BCF analysis)

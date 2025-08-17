@@ -1,0 +1,90 @@
+&lt;Project Sdk="Microsoft.NET.Sdk"&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;OutputType&gt;WinExe&lt;/OutputType&gt;
+    &lt;TargetFramework&gt;net8.0-windows&lt;/TargetFramework&gt;
+    &lt;UseWPF&gt;true&lt;/UseWPF&gt;
+    &lt;UseWindowsForms&gt;true&lt;/UseWindowsForms&gt;
+    &lt;ApplicationIcon&gt;icon.ico&lt;/ApplicationIcon&gt;
+    &lt;StartupObject&gt;MedicalLabAnalyzer.App&lt;/StartupObject&gt;
+    &lt;AssemblyTitle&gt;Medical Lab Analyzer&lt;/AssemblyTitle&gt;
+    &lt;AssemblyDescription&gt;نظام تحليل المختبرات الطبية&lt;/AssemblyDescription&gt;
+    &lt;AssemblyVersion&gt;1.0.0.0&lt;/AssemblyVersion&gt;
+    &lt;FileVersion&gt;1.0.0.0&lt;/FileVersion&gt;
+    &lt;Copyright&gt;© 2025 Medical Lab Analyzer. All rights reserved.&lt;/Copyright&gt;
+    &lt;RuntimeIdentifiers&gt;win-x86;win-x64&lt;/RuntimeIdentifiers&gt;
+    &lt;SelfContained&gt;true&lt;/SelfContained&gt;
+    &lt;IncludeNativeLibrariesForSelfExtract&gt;true&lt;/IncludeNativeLibrariesForSelfExtract&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" /&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" /&gt;
+    &lt;PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8"&gt;
+      &lt;PrivateAssets&gt;all&lt;/PrivateAssets&gt;
+      &lt;IncludeAssets&gt;runtime; build; native; contentfiles; analyzers; buildtransitive&lt;/IncludeAssets&gt;
+    &lt;/PackageReference&gt;
+    
+    &lt;!-- WPF Extended Controls --&gt;
+    &lt;PackageReference Include="MaterialDesignThemes" Version="5.1.0" /&gt;
+    &lt;PackageReference Include="MaterialDesignColors" Version="3.1.0" /&gt;
+    &lt;PackageReference Include="ControlzEx" Version="4.4.0" /&gt;
+    &lt;PackageReference Include="MahApps.Metro" Version="2.4.10" /&gt;
+    
+    &lt;!-- Image and Video Processing --&gt;
+    &lt;PackageReference Include="Emgu.CV" Version="4.9.0.5494" /&gt;
+    &lt;PackageReference Include="Emgu.CV.runtime.windows" Version="4.9.0.5494" /&gt;
+    &lt;PackageReference Include="FFMpegCore" Version="5.1.0" /&gt;
+    &lt;PackageReference Include="System.Drawing.Common" Version="8.0.8" /&gt;
+    &lt;PackageReference Include="SkiaSharp" Version="2.88.8" /&gt;
+    &lt;PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.8" /&gt;
+    
+    &lt;!-- AI and Machine Learning --&gt;
+    &lt;PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" /&gt;
+    &lt;PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.19.2" /&gt;
+    &lt;PackageReference Include="Yolov8.Net" Version="1.0.2" /&gt;
+    &lt;PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" /&gt;
+    &lt;PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" /&gt;
+    &lt;PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" /&gt;
+    &lt;PackageReference Include="NumSharp" Version="0.30.0" /&gt;
+    &lt;PackageReference Include="MathNet.Numerics" Version="5.0.0" /&gt;
+    
+    &lt;!-- PDF and Excel Generation --&gt;
+    &lt;PackageReference Include="iTextSharp" Version="5.5.13.3" /&gt;
+    &lt;PackageReference Include="EPPlus" Version="7.3.2" /&gt;
+    &lt;PackageReference Include="QuestPDF" Version="2024.7.3" /&gt;
+    
+    &lt;!-- Data Binding and MVVM --&gt;
+    &lt;PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" /&gt;
+    &lt;PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" /&gt;
+    
+    &lt;!-- Logging --&gt;
+    &lt;PackageReference Include="NLog" Version="5.3.4" /&gt;
+    &lt;PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" /&gt;
+    
+    &lt;!-- Configuration --&gt;
+    &lt;PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" /&gt;
+    &lt;PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" /&gt;
+    &lt;PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" /&gt;
+    &lt;PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" /&gt;
+    
+    &lt;!-- Security and Encryption --&gt;
+    &lt;PackageReference Include="BCrypt.Net-Next" Version="4.0.3" /&gt;
+    &lt;PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;None Include="icon.ico" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;EmbeddedResource Include="Resources\**\*" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;None Update="Database\medical_lab.db"&gt;
+      &lt;CopyToOutputDirectory&gt;PreserveNewest&lt;/CopyToOutputDirectory&gt;
+    &lt;/None&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;

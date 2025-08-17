@@ -1,0 +1,67 @@
+# YOLOv8 Model Configuration for CASA Analysis
+# This configuration defines the YOLOv8 model settings for sperm detection and analysis
+
+model_config:
+  # Model file path (relative to AI/YOLOv8 directory)
+  model_path: "yolov8n_sperm.onnx"
+  
+  # Input image size for the model
+  input_size: [640, 640]
+  
+  # Confidence threshold for detection
+  confidence_threshold: 0.5
+  
+  # Non-Maximum Suppression (NMS) threshold
+  nms_threshold: 0.4
+  
+  # Maximum number of detections per image
+  max_detections: 1000
+  
+  # Class names for detection
+  class_names:
+    - "sperm"
+    - "sperm_head"
+    - "sperm_tail"
+  
+  # Preprocessing settings
+  preprocessing:
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    
+# CASA Analysis Settings
+casa_settings:
+  # Frame rate for video analysis (fps)
+  target_fps: 25
+  
+  # Minimum track length (frames) to be considered valid
+  min_track_length: 10
+  
+  # Pixel to micrometer conversion factor
+  # This should be calibrated based on the microscope magnification
+  pixel_to_micrometer: 0.2
+  
+  # WHO 2010 Standards - Velocity thresholds (μm/s)
+  velocity_thresholds:
+    progressive_motility: 25.0  # Minimum VCL for progressive motility
+    slow_motility: 5.0          # Minimum VCL for slow motility
+  
+  # WHO 2010 Standards - Linearity thresholds
+  linearity_thresholds:
+    progressive_lin: 0.5        # Minimum LIN for progressive motility
+    progressive_str: 0.8        # Minimum STR for progressive motility
+
+# Model Download Information
+model_info:
+  download_url: "https://github.com/ultralytics/yolov8/releases/download/v8.0.0/yolov8n.pt"
+  custom_model_note: |
+    For CASA analysis, you need a custom-trained YOLOv8 model.
+    The base YOLOv8n model can be fine-tuned on sperm microscopy images.
+    Place the trained model file (yolov8n_sperm.onnx) in the AI/YOLOv8 directory.
+  
+  training_data_note: |
+    Training data should include:
+    - Microscopy images of sperm samples
+    - Various magnifications (400x, 1000x)
+    - Different sample conditions (fresh, processed)
+    - Annotations for sperm heads and tails

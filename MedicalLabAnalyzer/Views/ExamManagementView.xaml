@@ -1,0 +1,424 @@
+<UserControl x:Class="MedicalLabAnalyzer.Views.ExamManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             FlowDirection="RightToLeft"
+             Background="#F5F5F5">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="CardStyle" TargetType="materialDesign:Card">
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="materialDesign:ColorZoneAssist.Mode" Value="Standard"/>
+        </Style>
+        <Style x:Key="ActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Width" Value="120"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="16">
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="TestTube" Width="32" Height="32" 
+                                       VerticalAlignment="Center" Foreground="White"/>
+                <TextBlock Text="إدارة الفحوصات الطبية" FontSize="20" FontWeight="Bold" 
+                          Foreground="White" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                
+                <!-- Quick Stats -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="50,0,0,0">
+                    <Border Background="#4CAF50" CornerRadius="12" Padding="12,4" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="إجمالي الفحوصات: " Foreground="White" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalExams}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#FF9800" CornerRadius="12" Padding="12,4" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="بانتظار النتائج: " Foreground="White" FontSize="12"/>
+                            <TextBlock Text="{Binding PendingExams}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Border Background="#2196F3" CornerRadius="12" Padding="12,4">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="اليوم: " Foreground="White" FontSize="12"/>
+                            <TextBlock Text="{Binding TodayExams}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Search and Filter Panel -->
+        <materialDesign:Card Grid.Row="1" Style="{StaticResource CardStyle}" Margin="16,16,16,8">
+            <StackPanel Orientation="Vertical" Padding="16">
+                
+                <!-- Search Row -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search Box -->
+                    <TextBox Grid.Column="0" x:Name="SearchTextBox" 
+                            materialDesign:HintAssist.Hint="ابحث برقم الفحص، اسم المريض، أو رقم الهوية"
+                            materialDesign:TextFieldAssist.HasClearButton="True"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                            Style="{StaticResource MaterialDesignFloatingHintTextBox}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <!-- Search Button -->
+                    <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding SearchCommand}" Margin="8,0,0,0"
+                           ToolTip="بحث">
+                        <materialDesign:PackIcon Kind="Magnify" Width="24" Height="24"/>
+                    </Button>
+
+                    <!-- Filter Button -->
+                    <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding ShowFiltersCommand}" Margin="8,0,0,0"
+                           ToolTip="المرشحات">
+                        <materialDesign:PackIcon Kind="Filter" Width="24" Height="24"/>
+                    </Button>
+
+                    <!-- New Exam Button -->
+                    <Button Grid.Column="3" Style="{StaticResource MaterialDesignRaisedAccentButton}"
+                           Command="{Binding NewExamCommand}" Margin="16,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" Margin="0,0,8,0"/>
+                            <TextBlock Text="فحص جديد"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- Filters Panel (Collapsible) -->
+                <Expander x:Name="FiltersExpander" IsExpanded="{Binding ShowFilters}" 
+                         Header="المرشحات المتقدمة" Margin="0,8,0,0">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Test Type Filter -->
+                        <ComboBox Grid.Row="0" Grid.Column="0" Margin="0,0,16,0"
+                                 materialDesign:HintAssist.Hint="نوع التحليل"
+                                 ItemsSource="{Binding TestTypes}"
+                                 SelectedItem="{Binding SelectedTestType}"
+                                 Style="{StaticResource MaterialDesignFloatingHintComboBox}"/>
+
+                        <!-- Status Filter -->
+                        <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,16,0"
+                                 materialDesign:HintAssist.Hint="الحالة"
+                                 ItemsSource="{Binding StatusOptions}"
+                                 SelectedItem="{Binding SelectedStatus}"
+                                 Style="{StaticResource MaterialDesignFloatingHintComboBox}"/>
+
+                        <!-- Date From -->
+                        <DatePicker Grid.Row="0" Grid.Column="2" Margin="0,0,16,0"
+                                   materialDesign:HintAssist.Hint="من تاريخ"
+                                   SelectedDate="{Binding DateFrom}"
+                                   Style="{StaticResource MaterialDesignFloatingHintDatePicker}"/>
+
+                        <!-- Date To -->
+                        <DatePicker Grid.Row="0" Grid.Column="3"
+                                   materialDesign:HintAssist.Hint="إلى تاريخ"
+                                   SelectedDate="{Binding DateTo}"
+                                   Style="{StaticResource MaterialDesignFloatingHintDatePicker}"/>
+
+                        <!-- Filter Actions -->
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Orientation="Horizontal" 
+                                   HorizontalAlignment="Left" Margin="0,16,0,0">
+                            <Button Content="تطبيق المرشحات" Style="{StaticResource MaterialDesignRaisedButton}"
+                                   Command="{Binding ApplyFiltersCommand}" Margin="0,0,12,0"/>
+                            <Button Content="إزالة المرشحات" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                   Command="{Binding ClearFiltersCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- Exams List -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource CardStyle}" Margin="16,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- List Header -->
+                <Border Grid.Row="0" Background="#F0F0F0" Padding="16,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="180"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="رقم الفحص" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="اسم المريض" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="نوع التحليل" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="التاريخ" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="الحالة" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="الأولوية" FontWeight="Bold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="6" Text="الإجراءات" FontWeight="Bold" TextAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Loading Indicator -->
+                <ProgressBar Grid.Row="1" IsIndeterminate="True" 
+                            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                            Width="40" Height="40"/>
+
+                <!-- Exams List -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" 
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding Exams}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="16,12"
+                                       Background="{Binding Background}">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftDoubleClick" 
+                                                     Command="{Binding DataContext.ViewExamDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="180"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Exam ID -->
+                                        <TextBlock Grid.Column="0" Text="{Binding ExamId}" 
+                                                  TextAlignment="Center" VerticalAlignment="Center"
+                                                  FontWeight="Bold" Foreground="#1976D2"/>
+
+                                        <!-- Patient Name -->
+                                        <TextBlock Grid.Column="1" Text="{Binding PatientName}" 
+                                                  TextAlignment="Center" VerticalAlignment="Center"/>
+
+                                        <!-- Test Type -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon Kind="{Binding TestTypeIcon}" 
+                                                                   Width="16" Height="16" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding TestType}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+
+                                        <!-- Date -->
+                                        <TextBlock Grid.Column="3" Text="{Binding ExamDate, StringFormat='dd/MM/yyyy'}" 
+                                                  TextAlignment="Center" VerticalAlignment="Center"/>
+
+                                        <!-- Status -->
+                                        <Border Grid.Column="4" Background="{Binding StatusColor}" 
+                                               CornerRadius="12" Padding="8,4" HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding Status}" Foreground="White" 
+                                                      FontSize="11" FontWeight="Bold" TextAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Priority -->
+                                        <StackPanel Grid.Column="5" Orientation="Horizontal" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon Kind="{Binding PriorityIcon}" 
+                                                                   Width="16" Height="16" 
+                                                                   Foreground="{Binding PriorityColor}"/>
+                                            <TextBlock Text="{Binding Priority}" Margin="4,0,0,0" 
+                                                      Foreground="{Binding PriorityColor}" FontSize="11"/>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="6" Orientation="Horizontal" 
+                                                   HorizontalAlignment="Center">
+                                            
+                                            <!-- View Details -->
+                                            <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                   Command="{Binding DataContext.ViewExamDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" ToolTip="عرض التفاصيل" Margin="2">
+                                                <materialDesign:PackIcon Kind="Eye" Width="16" Height="16"/>
+                                            </Button>
+
+                                            <!-- Edit Exam -->
+                                            <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                   Command="{Binding DataContext.EditExamCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" ToolTip="تعديل الفحص" Margin="2"
+                                                   IsEnabled="{Binding CanEdit}">
+                                                <materialDesign:PackIcon Kind="Edit" Width="16" Height="16"/>
+                                            </Button>
+
+                                            <!-- Add Results -->
+                                            <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                   Command="{Binding DataContext.AddResultsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" ToolTip="إضافة النتائج" Margin="2"
+                                                   IsEnabled="{Binding CanAddResults}">
+                                                <materialDesign:PackIcon Kind="FileDocument" Width="16" Height="16"/>
+                                            </Button>
+
+                                            <!-- Print Report -->
+                                            <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                   Command="{Binding DataContext.PrintReportCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" ToolTip="طباعة التقرير" Margin="2"
+                                                   IsEnabled="{Binding HasResults}">
+                                                <materialDesign:PackIcon Kind="Printer" Width="16" Height="16"/>
+                                            </Button>
+
+                                            <!-- Delete Exam -->
+                                            <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                   Command="{Binding DataContext.DeleteExamCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" ToolTip="حذف الفحص" Margin="2"
+                                                   IsEnabled="{Binding CanDelete}" Foreground="#F44336">
+                                                <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- No Results Message -->
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding HasNoResults, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <materialDesign:PackIcon Kind="TestTubeEmpty" Width="64" Height="64" 
+                                           Foreground="#BDBDBD" HorizontalAlignment="Center"/>
+                    <TextBlock Text="لا توجد فحوصات تطابق معايير البحث" 
+                              FontSize="16" Foreground="#757575" 
+                              HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                    <Button Content="إضافة فحص جديد" 
+                           Style="{StaticResource MaterialDesignRaisedAccentButton}"
+                           Command="{Binding NewExamCommand}" Margin="0,16,0,0"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Pagination and Actions -->
+        <materialDesign:Card Grid.Row="3" Style="{StaticResource CardStyle}" Margin="16,8,16,16">
+            <Grid Padding="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Results Info -->
+                <TextBlock Grid.Column="0" VerticalAlignment="Center">
+                    <Run Text="عرض"/>
+                    <Run Text="{Binding CurrentPageStart}" FontWeight="Bold"/>
+                    <Run Text="-"/>
+                    <Run Text="{Binding CurrentPageEnd}" FontWeight="Bold"/>
+                    <Run Text="من"/>
+                    <Run Text="{Binding TotalRecords}" FontWeight="Bold"/>
+                    <Run Text="سجل"/>
+                </TextBlock>
+
+                <!-- Pagination -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding FirstPageCommand}" IsEnabled="{Binding CanGoToFirstPage}"
+                           ToolTip="الصفحة الأولى">
+                        <materialDesign:PackIcon Kind="ChevronDoubleRight" Width="20" Height="20"/>
+                    </Button>
+                    
+                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding PreviousPageCommand}" IsEnabled="{Binding CanGoToPreviousPage}"
+                           ToolTip="الصفحة السابقة">
+                        <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"/>
+                    </Button>
+
+                    <Border Background="#E3F2FD" CornerRadius="4" Padding="12,6" Margin="8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="صفحة " VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CurrentPage}" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text=" من " VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalPages}" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding NextPageCommand}" IsEnabled="{Binding CanGoToNextPage}"
+                           ToolTip="الصفحة التالية">
+                        <materialDesign:PackIcon Kind="ChevronLeft" Width="20" Height="20"/>
+                    </Button>
+                    
+                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}"
+                           Command="{Binding LastPageCommand}" IsEnabled="{Binding CanGoToLastPage}"
+                           ToolTip="الصفحة الأخيرة">
+                        <materialDesign:PackIcon Kind="ChevronDoubleLeft" Width="20" Height="20"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Actions -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <Button Content="تصدير إلى Excel" Style="{StaticResource ActionButtonStyle}"
+                           Command="{Binding ExportToExcelCommand}" Background="#4CAF50" BorderBrush="#4CAF50">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FileExcel" Width="16" Height="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="تصدير"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+
+                    <Button Content="طباعة القائمة" Style="{StaticResource ActionButtonStyle}"
+                           Command="{Binding PrintListCommand}" Background="#FF9800" BorderBrush="#FF9800">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Printer" Width="16" Height="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="طباعة"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+
+                    <Button Content="تحديث" Style="{StaticResource ActionButtonStyle}"
+                           Command="{Binding RefreshCommand}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="تحديث"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>

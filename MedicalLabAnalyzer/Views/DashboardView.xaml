@@ -1,0 +1,518 @@
+<UserControl x:Class="MedicalLabAnalyzer.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             FlowDirection="RightToLeft"
+             FontFamily="Segoe UI, Arial"
+             d:DesignHeight="800" d:DesignWidth="1200">
+
+    <UserControl.Resources>
+        <!-- Dashboard Card Styles -->
+        <Style x:Key="DashboardCardStyle" TargetType="materialDesign:Card">
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp4"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatCardStyle" TargetType="materialDesign:Card" BasedOn="{StaticResource DashboardCardStyle}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp12"/>
+                    <Setter Property="Background" Value="#F8F9FA"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatNumberStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="36"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,8"/>
+        </Style>
+
+        <Style x:Key="StatLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#666666"/>
+        </Style>
+
+        <Style x:Key="StatIconStyle" TargetType="materialDesign:PackIcon">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="Margin" Value="16,24,16,16"/>
+        </Style>
+
+        <Style x:Key="AIStatusCardStyle" TargetType="materialDesign:Card">
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp6"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="CornerRadius" Value="16"/>
+        </Style>
+
+        <!-- Animations -->
+        <Storyboard x:Key="FadeInStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                           From="0" To="1" Duration="0:0:0.5">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <Storyboard x:Key="SlideInStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                           From="30" To="0" Duration="0:0:0.6">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}"/>
+        </EventTrigger>
+    </UserControl.Triggers>
+
+    <UserControl.RenderTransform>
+        <TranslateTransform/>
+    </UserControl.RenderTransform>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                  HorizontalScrollBarVisibility="Disabled"
+                  Background="#F5F5F5">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Welcome Section -->
+                <RowDefinition Height="Auto"/> <!-- Statistics Cards -->
+                <RowDefinition Height="Auto"/> <!-- AI Status Section -->
+                <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                <RowDefinition Height="Auto"/> <!-- Recent Activities -->
+                <RowDefinition Height="Auto"/> <!-- Charts Section -->
+            </Grid.RowDefinitions>
+
+            <!-- Welcome Section -->
+            <materialDesign:Card Grid.Row="0" Style="{StaticResource DashboardCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding WelcomeMessage}" 
+                                 FontSize="28" 
+                                 FontWeight="Bold"
+                                 Foreground="#1976D2"
+                                 Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding TodayDate, StringFormat='اليوم: {0:dd MMMM yyyy}'}" 
+                                 FontSize="16"
+                                 Foreground="#666666"
+                                 Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding CurrentTime, StringFormat='الوقت: {0:HH:mm:ss}'}" 
+                                 FontSize="14"
+                                 Foreground="#999999"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="WeatherSunny" 
+                                               Width="64" Height="64"
+                                               Foreground="#FFA726"/>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Statistics Cards -->
+            <TextBlock Grid.Row="1" Text="إحصائيات سريعة" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,40,0,0">
+                <!-- Total Patients -->
+                <materialDesign:Card Style="{StaticResource StatCardStyle}"
+                                   MouseLeftButtonUp="OnStatCardClick"
+                                   Tag="Patients">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="AccountGroup" 
+                                               Style="{StaticResource StatIconStyle}"
+                                               Foreground="#4CAF50"/>
+                        <TextBlock Text="{Binding TotalPatients}" 
+                                 Style="{StaticResource StatNumberStyle}"
+                                 Foreground="#4CAF50"/>
+                        <TextBlock Text="إجمالي المرضى" Style="{StaticResource StatLabelStyle}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Today's Exams -->
+                <materialDesign:Card Style="{StaticResource StatCardStyle}"
+                                   MouseLeftButtonUp="OnStatCardClick"
+                                   Tag="TodayExams">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Microscope" 
+                                               Style="{StaticResource StatIconStyle}"
+                                               Foreground="#2196F3"/>
+                        <TextBlock Text="{Binding TodayExams}" 
+                                 Style="{StaticResource StatNumberStyle}"
+                                 Foreground="#2196F3"/>
+                        <TextBlock Text="فحوصات اليوم" Style="{StaticResource StatLabelStyle}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Pending Results -->
+                <materialDesign:Card Style="{StaticResource StatCardStyle}"
+                                   MouseLeftButtonUp="OnStatCardClick"
+                                   Tag="PendingResults">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="ClockAlert" 
+                                               Style="{StaticResource StatIconStyle}"
+                                               Foreground="#FF9800"/>
+                        <TextBlock Text="{Binding PendingResults}" 
+                                 Style="{StaticResource StatNumberStyle}"
+                                 Foreground="#FF9800"/>
+                        <TextBlock Text="نتائج معلقة" Style="{StaticResource StatLabelStyle}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- AI Analyses -->
+                <materialDesign:Card Style="{StaticResource StatCardStyle}"
+                                   MouseLeftButtonUp="OnStatCardClick"
+                                   Tag="AIAnalyses">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Brain" 
+                                               Style="{StaticResource StatIconStyle}"
+                                               Foreground="#9C27B0"/>
+                        <TextBlock Text="{Binding AIAnalysesCount}" 
+                                 Style="{StaticResource StatNumberStyle}"
+                                 Foreground="#9C27B0"/>
+                        <TextBlock Text="تحاليل AI" Style="{StaticResource StatLabelStyle}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </UniformGrid>
+
+            <!-- AI Status Section -->
+            <TextBlock Grid.Row="2" Text="حالة نظام الذكاء الاصطناعي" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <Grid Grid.Row="2" Margin="0,40,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- CASA AI Status -->
+                <materialDesign:Card Grid.Column="0" Style="{StaticResource AIStatusCardStyle}">
+                    <Border Background="{Binding CASAStatusBrush}" CornerRadius="12" Padding="16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                <materialDesign:PackIcon Kind="VideoBox" 
+                                                       Width="24" Height="24" 
+                                                       Foreground="White"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,8,0"/>
+                                <TextBlock Text="نظام CASA AI" 
+                                         FontSize="18" 
+                                         FontWeight="SemiBold"
+                                         Foreground="White"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <TextBlock Text="{Binding CASAStatusText}" 
+                                     FontSize="14"
+                                     Foreground="White"
+                                     TextAlignment="Center"
+                                     Margin="0,0,0,8"/>
+                            
+                            <TextBlock Text="{Binding CASALastUpdate, StringFormat='آخر تحديث: {0:HH:mm}'}" 
+                                     FontSize="11"
+                                     Foreground="#E0E0E0"
+                                     TextAlignment="Center"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+                                <TextBlock Text="تحاليل اليوم: " 
+                                         FontSize="12"
+                                         Foreground="White"/>
+                                <TextBlock Text="{Binding CASAAnalysesToday}" 
+                                         FontSize="12"
+                                         FontWeight="Bold"
+                                         Foreground="White"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </materialDesign:Card>
+
+                <!-- Medical Image AI Status -->
+                <materialDesign:Card Grid.Column="1" Style="{StaticResource AIStatusCardStyle}">
+                    <Border Background="{Binding ImageAIStatusBrush}" CornerRadius="12" Padding="16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                <materialDesign:PackIcon Kind="ImageSearch" 
+                                                       Width="24" Height="24" 
+                                                       Foreground="White"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,8,0"/>
+                                <TextBlock Text="تحليل الصور الطبية" 
+                                         FontSize="18" 
+                                         FontWeight="SemiBold"
+                                         Foreground="White"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <TextBlock Text="{Binding ImageAIStatusText}" 
+                                     FontSize="14"
+                                     Foreground="White"
+                                     TextAlignment="Center"
+                                     Margin="0,0,0,8"/>
+                            
+                            <TextBlock Text="{Binding ImageAILastUpdate, StringFormat='آخر تحديث: {0:HH:mm}'}" 
+                                     FontSize="11"
+                                     Foreground="#E0E0E0"
+                                     TextAlignment="Center"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+                                <TextBlock Text="صور محللة: " 
+                                         FontSize="12"
+                                         Foreground="White"/>
+                                <TextBlock Text="{Binding ImagesAnalyzedToday}" 
+                                         FontSize="12"
+                                         FontWeight="Bold"
+                                         Foreground="White"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </materialDesign:Card>
+            </Grid>
+
+            <!-- Quick Actions -->
+            <TextBlock Grid.Row="3" Text="إجراءات سريعة" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <UniformGrid Grid.Row="3" Rows="1" Columns="4" Margin="0,40,0,0">
+                <!-- New Patient -->
+                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                      Height="80"
+                      Margin="8"
+                      Background="#4CAF50"
+                      BorderBrush="#4CAF50"
+                      Command="{Binding NewPatientCommand}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="AccountPlus" 
+                                               Width="24" Height="24" 
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                        <TextBlock Text="مريض جديد" 
+                                 Foreground="White" 
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- New CASA Exam -->
+                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                      Height="80"
+                      Margin="8"
+                      Background="#2196F3"
+                      BorderBrush="#2196F3"
+                      Command="{Binding NewCASAExamCommand}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="VideoPlus" 
+                                               Width="24" Height="24" 
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                        <TextBlock Text="فحص CASA" 
+                                 Foreground="White" 
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Image Analysis -->
+                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                      Height="80"
+                      Margin="8"
+                      Background="#9C27B0"
+                      BorderBrush="#9C27B0"
+                      Command="{Binding NewImageAnalysisCommand}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="ImagePlus" 
+                                               Width="24" Height="24" 
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                        <TextBlock Text="تحليل صورة" 
+                                 Foreground="White" 
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Generate Report -->
+                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                      Height="80"
+                      Margin="8"
+                      Background="#FF9800"
+                      BorderBrush="#FF9800"
+                      Command="{Binding GenerateReportCommand}">
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="FileChart" 
+                                               Width="24" Height="24" 
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                        <TextBlock Text="تقرير جديد" 
+                                 Foreground="White" 
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Button>
+            </UniformGrid>
+
+            <!-- Recent Activities -->
+            <TextBlock Grid.Row="4" Text="النشاطات الأخيرة" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <materialDesign:Card Grid.Row="4" Style="{StaticResource DashboardCardStyle}" Margin="8,40,8,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Activities List -->
+                    <ItemsControl Grid.Column="0" ItemsSource="{Binding RecentActivities}" MaxHeight="300">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <materialDesign:PackIcon Grid.Column="0" 
+                                                               Kind="{Binding ActivityIcon}" 
+                                                               Width="16" Height="16"
+                                                               Foreground="{Binding ActivityColor}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,12,0"/>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding ActivityText}" 
+                                                     FontSize="14"
+                                                     FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding ActivityDetails}" 
+                                                     FontSize="12"
+                                                     Foreground="#666666"/>
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Column="2" 
+                                                 Text="{Binding ActivityTime, StringFormat='{0:HH:mm}'}" 
+                                                 FontSize="11"
+                                                 Foreground="#999999"
+                                                 VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- View All Button -->
+                    <Button Grid.Column="1" 
+                          Content="عرض الكل"
+                          Style="{StaticResource MaterialDesignFlatButton}"
+                          Command="{Binding ViewAllActivitiesCommand}"
+                          VerticalAlignment="Top"
+                          Margin="16,0,0,0"/>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Charts Section -->
+            <TextBlock Grid.Row="5" Text="الإحصائيات والرسوم البيانية" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <Grid Grid.Row="5" Margin="0,40,0,24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Weekly Exams Chart -->
+                <materialDesign:Card Grid.Column="0" Style="{StaticResource DashboardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="الفحوصات الأسبوعية" 
+                                 FontSize="16" 
+                                 FontWeight="SemiBold"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,0,0,16"/>
+                        
+                        <!-- Placeholder for Chart -->
+                        <Border Height="200" 
+                              Background="#F8F9FA" 
+                              CornerRadius="8">
+                            <TextBlock Text="رسم بياني للفحوصات الأسبوعية" 
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Foreground="#666666"/>
+                        </Border>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Test Types Distribution -->
+                <materialDesign:Card Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="توزيع أنواع الفحوصات" 
+                                 FontSize="16" 
+                                 FontWeight="SemiBold"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,0,0,16"/>
+                        
+                        <!-- Test Types List -->
+                        <ItemsControl ItemsSource="{Binding TestTypesDistribution}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding TestType}" 
+                                                 FontSize="12"/>
+                                        
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Count}" 
+                                                     FontSize="12"
+                                                     FontWeight="Bold"
+                                                     Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding Percentage, StringFormat='({0:F1}%)'}" 
+                                                     FontSize="11"
+                                                     Foreground="#666666"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

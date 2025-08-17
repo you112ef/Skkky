@@ -140,11 +140,11 @@ jobs:
           Write-Host "Cores: $($systemInfo.ProcessorCores)"
           
           # Output for other steps
-          $osOutput = "os-version=$($systemInfo.OSName)"
+          $osOutput = 'os-version=' + $systemInfo.OSName
           Add-Content -Path $env:GITHUB_OUTPUT -Value $osOutput
-          $serverOutput = "is-server-2025=$($systemInfo.IsServer2025)"
+          $serverOutput = 'is-server-2025=' + $systemInfo.IsServer2025
           Add-Content -Path $env:GITHUB_OUTPUT -Value $serverOutput
-          $memoryOutput = "total-memory=$($systemInfo.TotalMemoryGB)"
+          $memoryOutput = 'total-memory=' + $systemInfo.TotalMemoryGB
           Add-Content -Path $env:GITHUB_OUTPUT -Value $memoryOutput
           
           # Check for Windows Server 2025 specific features
@@ -154,11 +154,11 @@ jobs:
             # Check D: drive availability
             if (!(Test-Path "D:\")) {
               Write-Warning "⚠️ D: drive not available (expected on Server 2025)"
-              $driveOutput = "d-drive-available=false"
+              $driveOutput = 'd-drive-available=false'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             } else {
               Write-Host "✅ D: drive available (unexpected on Server 2025)"
-              $driveOutput = "d-drive-available=true"
+              $driveOutput = 'd-drive-available=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $driveOutput
             }
           }
@@ -230,16 +230,16 @@ jobs:
             # Check if .NET 8.0 is available
             if ($sdks -like "*8.*") {
               Write-Host "✅ .NET 8.0 SDK found"
-              $dotnetOutput = "dotnet-8-available=true"
+              $dotnetOutput = 'dotnet-8-available=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             } else {
               Write-Warning "⚠️ .NET 8.0 SDK not found"
-              $dotnetOutput = "dotnet-8-available=false"
+              $dotnetOutput = 'dotnet-8-available=false'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             }
           } catch {
             Write-Error "❌ .NET check failed: $($_.Exception.Message)"
-            $dotnetOutput = "dotnet-8-available=false"
+            $dotnetOutput = 'dotnet-8-available=false'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $dotnetOutput
             exit 1
           }
@@ -268,11 +268,11 @@ jobs:
             
             if (Test-Path $testFile) {
               Write-Host "✅ Workspace operations successful"
-              $workspaceOutput = "workspace-test=passed"
+              $workspaceOutput = 'workspace-test=passed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
             } else {
               Write-Error "❌ File creation failed"
-              $workspaceOutput = "workspace-test=failed"
+              $workspaceOutput = 'workspace-test=failed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
             }
             
@@ -281,7 +281,7 @@ jobs:
             
           } catch {
             Write-Error "❌ Workspace test failed: $($_.Exception.Message)"
-            $workspaceOutput = "workspace-test=failed"
+            $workspaceOutput = 'workspace-test=failed'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $workspaceOutput
           }
       
@@ -313,19 +313,19 @@ jobs:
               }
               
               Write-Host "✅ Build successful"
-              $buildOutput = "build-test=passed"
+              $buildOutput = 'build-test=passed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
               
             } catch {
               Write-Error "❌ Build failed: $($_.Exception.Message)"
-              $buildOutput = "build-test=failed"
+              $buildOutput = 'build-test=failed'
               Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
             } finally {
               Pop-Location
             }
           } else {
             Write-Host "ℹ️ Project file not found, skipping build test"
-            $buildOutput = "build-test=skipped"
+            $buildOutput = 'build-test=skipped'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $buildOutput
           }
       
@@ -449,7 +449,7 @@ jobs:
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
           $perfResults | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\performance-${{ matrix.os }}-${{ matrix.config }}.json"
           
-          $scoreOutput = "score=$overallScore"
+          $scoreOutput = 'score=' + $overallScore
           Add-Content -Path $env:GITHUB_OUTPUT -Value $scoreOutput
       
       - name: Compatibility assessment
@@ -514,9 +514,9 @@ jobs:
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
           $compatReport | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\compatibility-${{ matrix.os }}-${{ matrix.config }}.json"
           
-          $statusOutput = "status=$status"
+          $statusOutput = 'status=' + $status
           Add-Content -Path $env:GITHUB_OUTPUT -Value $statusOutput
-          $issuesOutput = "issues-count=$($issues.Count)"
+          $issuesOutput = 'issues-count=' + $issues.Count
           Add-Content -Path $env:GITHUB_OUTPUT -Value $issuesOutput
       
       - name: Upload test results

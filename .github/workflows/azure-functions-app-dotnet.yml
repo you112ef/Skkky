@@ -85,9 +85,9 @@ jobs:
             Write-Host "✅ Functions project found"
           }
           
-          $envOutput = "environment=$environment"
+          $envOutput = 'environment=' + $environment
           Add-Content -Path $env:GITHUB_OUTPUT -Value $envOutput
-          $appOutput = "function-app-name=$functionAppName"
+          $appOutput = 'function-app-name=' + $functionAppName
           Add-Content -Path $env:GITHUB_OUTPUT -Value $appOutput
       
       - name: Check Azure credentials
@@ -147,7 +147,7 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            $projectExistsOutput = "project-exists=true"
+            $projectExistsOutput = 'project-exists=true'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
             
             # Look for project files
@@ -155,7 +155,7 @@ jobs:
             if ($projectFiles.Count -gt 0) {
               $projectFile = $projectFiles[0].FullName
               Write-Host "📁 Project file: $projectFile"
-              $projectFileOutput = "project-file=$projectFile"
+              $projectFileOutput = 'project-file=' + $projectFile
               Add-Content -Path $env:GITHUB_OUTPUT -Value $projectFileOutput
             } else {
               Write-Error "❌ No .csproj file found in Functions directory"
@@ -163,7 +163,7 @@ jobs:
             }
           } else {
             Write-Host "ℹ️ No Functions project found, skipping deployment"
-            $projectExistsOutput = "project-exists=false"
+            $projectExistsOutput = 'project-exists=false'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
           }
       

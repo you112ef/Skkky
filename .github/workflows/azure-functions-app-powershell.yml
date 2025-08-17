@@ -85,9 +85,9 @@ jobs:
             Write-Host "✅ PowerShell Functions project found"
           }
           
-          $envOutput = "environment=$environment"
+          $envOutput = 'environment=' + $environment
           Add-Content -Path $env:GITHUB_OUTPUT -Value $envOutput
-          $appOutput = "function-app-name=$functionAppName"
+          $appOutput = 'function-app-name=' + $functionAppName
           Add-Content -Path $env:GITHUB_OUTPUT -Value $appOutput
       
       - name: Check PowerShell version and capabilities
@@ -120,7 +120,7 @@ jobs:
             }
           }
           
-          $versionOutput = "version=$($PSVersionTable.PSVersion)"
+          $versionOutput = 'version=' + $PSVersionTable.PSVersion
           Add-Content -Path $env:GITHUB_OUTPUT -Value $versionOutput
       
       - name: Check Azure credentials
@@ -196,7 +196,7 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ PowerShell Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            $projectExistsOutput = "project-exists=true"
+            $projectExistsOutput = 'project-exists=true'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
             
             # Check for host.json and other required files
@@ -238,7 +238,7 @@ jobs:
             
           } else {
             Write-Host "ℹ️ No PowerShell Functions project found, skipping deployment"
-            $projectExistsOutput = "project-exists=false"
+            $projectExistsOutput = 'project-exists=false'
             Add-Content -Path $env:GITHUB_OUTPUT -Value $projectExistsOutput
           }
       

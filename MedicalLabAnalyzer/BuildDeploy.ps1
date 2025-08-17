@@ -1,7 +1,22 @@
 # MedicalLabAnalyzer Build and Deploy Script
 # Author: Scout AI
 # Description: Complete build, package, and deployment script for offline medical lab system
-# Usage: .\BuildDeploy.ps1 [Options]
+# 
+# Usage Examples:
+#   .\BuildDeploy.ps1                                    # Standard build
+#   .\BuildDeploy.ps1 -CreateInstaller                  # Build with MSI installer
+#   .\BuildDeploy.ps1 -CleanFirst                       # Clean previous build first
+#   .\BuildDeploy.ps1 -ValidateOnly                     # Just validate existing files
+#   .\BuildDeploy.ps1 -Configuration Debug -IncludeDebugSymbols  # Debug build
+#
+# Parameters:
+#   -Configuration: Release|Debug (default: Release)
+#   -CreateInstaller: Create MSI installer (requires WiX Toolset)
+#   -CleanFirst: Remove previous build before starting
+#   -ValidateOnly: Just check existing files without building
+#   -CompressOutput: Create ZIP package (default: true)
+#   -SkipBuild: Skip build process
+#   -IncludeDebugSymbols: Include debug symbols
 
 param(
     [string]$Configuration = "Release",
@@ -10,6 +25,8 @@ param(
     [switch]$CreateInstaller = $false,
     [switch]$IncludeDebugSymbols = $false,
     [switch]$CompressOutput = $true,
+    [switch]$ValidateOnly = $false,
+    [switch]$CleanFirst = $false,
     [string]$OutputPath = ".\Deploy"
 )
 
@@ -70,6 +87,14 @@ if (!(Test-Path $SolutionFile)) {
     Write-Success "✅ Solution file found: $SolutionFile"
 }
 
+# Clean previous build if requested
+if ($CleanFirst -and (Test-Path $OutputPath)) {
+    Write-Info ""
+    Write-Info "🧽 Cleaning previous build..."
+    Remove-Item -Path $OutputPath -Recurse -Force
+    Write-Success "✅ Previous build cleaned"
+}
+
 # Create output directories
 Write-Info ""
 Write-Info "📁 Creating output directories..."
@@ -81,7 +106,25 @@ foreach ($path in @($OutputPath, $BuildPath, $PackagePath, $TempPath)) {
     if (!(Test-Path $path)) {
         New-Item -ItemType Directory -Path $path -Force | Out-Null
         Write-Success "✅ Created: $path"
+    } else {
+        Write-Info "📝 Directory exists: $path"
     }
+}
+
+# If validation only, just check files and exit
+if ($ValidateOnly) {
+    Write-Info ""
+    Write-Info "🔍 Validation-only mode - checking existing files..."
+    
+    if (Test-Path "$PackagePath\$ProjectName.exe") {
+        $exeSize = [math]::Round((Get-Item "$PackagePath\$ProjectName.exe").Length / 1MB, 2)
+        Write-Success "✅ Found: $ProjectName.exe ($exeSize MB)"
+    } else {
+        Write-Warning "⚠️ Not found: $ProjectName.exe"
+    }
+    
+    Write-Info "Validation completed."
+    exit 0
 }
 
 # Build project
@@ -135,14 +178,32 @@ $publishArgs = @(
     "--output", $publishPath,
     "/p:PublishSingleFile=true",
     "/p:IncludeNativeLibrariesForSelfExtract=true",
-    "/p:PublishTrimmed=false"
+    "/p:PublishTrimmed=false",
+    "/p:PublishReadyToRun=false",
+    "/p:EnableCompressionInSingleFile=true"
 )
 
+Write-Info "Publishing with arguments: $($publishArgs -join ' ')"
 & dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Error "❌ Publish failed"
     exit 1
 }
+
+# Verify exe file creation
+$exeFile = "$publishPath\$ProjectName.exe"
+if (Test-Path $exeFile) {
+    $exeSize = [math]::Round((Get-Item $exeFile).Length / 1MB, 2)
+    Write-Success "✅ EXE file created: $ProjectName.exe ($exeSize MB)"
+    Write-Info "📍 EXE location: $exeFile"
+else {
+    Write-Error "❌ EXE file not found at expected location: $exeFile"
+    # List all files in publish directory for debugging
+    Write-Info "Files in publish directory:"
+    Get-ChildItem $publishPath -Recurse | ForEach-Object { Write-Info "  $($_.FullName)" }
+    exit 1
+}
+
 Write-Success "✅ Application published successfully"
 
 # Copy additional files
@@ -176,6 +237,19 @@ foreach ($folder in $packageStructure.Keys) {
 # Copy published application
 Write-Info "📂 Copying application files..."
 Copy-Item -Path "$publishPath\*" -Destination $PackagePath -Recurse -Force
+
+# Verify main exe file in package
+$packageExe = "$PackagePath\$ProjectName.exe"
+if (Test-Path $packageExe) {
+    $packageExeSize = [math]::Round((Get-Item $packageExe).Length / 1MB, 2)
+    Write-Success "✅ Main EXE copied to package: $ProjectName.exe ($packageExeSize MB)"
+    Write-Info "📍 Final EXE location: $packageExe"
+else {
+    Write-Error "❌ Main EXE not found in package directory"
+    Write-Info "Package directory contents:"
+    Get-ChildItem $PackagePath | ForEach-Object { Write-Info "  $($_.Name)" }
+}
+
 Write-Success "✅ Application files copied"
 
 # Copy important files
@@ -460,22 +534,39 @@ if ($CreateInstaller) {
     $wixPath = Get-Command "heat.exe" -ErrorAction SilentlyContinue
     if ($wixPath) {
         Write-Info "🔧 WiX Toolset found, creating installer..."
+        Write-Info "📍 WiX path: $($wixPath.Source)"
         
         # Generate WiX source files
         $wxsFile = "$TempPath\Product.wxs"
+        $directoryWxs = "$TempPath\Directory.wxs"
         $msiFile = "$OutputPath\$ProjectName-Setup-v1.0.0.msi"
         
         # Heat to generate component list
-        & heat.exe dir $PackagePath -cg ApplicationFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$TempPath\Directory.wxs"
+        Write-Info "🔥 Generating component files with Heat..."
+        $heatArgs = @(
+            "dir", $PackagePath,
+            "-cg", "ApplicationFiles",
+            "-gg", "-scom", "-sreg", "-sfrag", "-srd",
+            "-dr", "INSTALLDIR",
+            "-out", $directoryWxs
+        )
+        & heat.exe @heatArgs
         
-        # Create main WiX file
+        if (-not (Test-Path $directoryWxs)) {
+            Write-Error "❌ Heat failed to generate directory structure"
+            return
+        }
+        
+        # Create main WiX file with better configuration
         $wixContent = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="Medical Lab Analyzer" Language="1033" Version="1.0.0" 
-           Manufacturer="Medical Lab Solutions" UpgradeCode="12345678-1234-1234-1234-123456789012">
+           Manufacturer="Medical Lab Solutions" UpgradeCode="{12345678-1234-1234-1234-123456789012}">
     
-    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" 
+             Description="Medical Lab Analyzer with AI" 
+             Comments="Advanced medical laboratory management system" />
     
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
     
@@ -487,28 +578,67 @@ if ($CreateInstaller) {
     
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLDIR" Name="Medical Lab Analyzer" />
+        <Directory Id="INSTALLDIR" Name="Medical Lab Analyzer">
+          <Component Id="MainExecutable" Guid="{87654321-4321-4321-4321-210987654321}">
+            <File Id="MainExe" Source="$PackagePath\$ProjectName.exe" KeyPath="yes">
+              <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="Medical Lab Analyzer"
+                        WorkingDirectory="INSTALLDIR" Icon="AppIcon.exe" IconIndex="0" Advertise="yes" />
+              <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuDir" Name="Medical Lab Analyzer"
+                        WorkingDirectory="INSTALLDIR" Icon="AppIcon.exe" IconIndex="0" Advertise="yes" />
+            </File>
+          </Component>
+        </Directory>
       </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="Medical Lab Analyzer" />
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop" />
     </Directory>
+    
+    <Icon Id="AppIcon.exe" SourceFile="$PackagePath\$ProjectName.exe" />
     
   </Product>
 </Wix>
 "@
         
         $wixContent | Out-File -FilePath $wxsFile -Encoding UTF8
+        Write-Success "✅ WiX source files generated"
         
-        # Compile
-        & candle.exe $wxsFile "$TempPath\Directory.wxs" -out $TempPath\
-        & light.exe "$TempPath\Product.wixobj" "$TempPath\Directory.wixobj" -out $msiFile
+        # Compile with Candle
+        Write-Info "🕯️ Compiling WiX sources..."
+        $candleArgs = @($wxsFile, $directoryWxs, "-out", "$TempPath\")
+        & candle.exe @candleArgs
+        
+        if (-not (Test-Path "$TempPath\Product.wixobj") -or -not (Test-Path "$TempPath\Directory.wixobj")) {
+            Write-Error "❌ Candle compilation failed"
+            return
+        }
+        
+        # Link with Light
+        Write-Info "🔗 Linking MSI package..."
+        $lightArgs = @(
+            "$TempPath\Product.wixobj", 
+            "$TempPath\Directory.wixobj", 
+            "-out", $msiFile,
+            "-ext", "WixUIExtension"
+        )
+        & light.exe @lightArgs
         
         if (Test-Path $msiFile) {
             $msiSize = [math]::Round((Get-Item $msiFile).Length / 1MB, 2)
-            Write-Success "✅ MSI installer created: $msiFile ($msiSize MB)"
+            Write-Success "✅ MSI installer created successfully!"
+            Write-Info "📍 MSI location: $msiFile"
+            Write-Info "📊 MSI size: $msiSize MB"
+        } else {
+            Write-Error "❌ MSI creation failed"
         }
     } else {
         Write-Warning "⚠️ WiX Toolset not found. MSI installer skipped."
-        Write-Info "   Download from: https://wixtoolset.org/"
+        Write-Info "   To create MSI installers, install WiX Toolset from: https://wixtoolset.org/"
+        Write-Info "   Then run this script with -CreateInstaller parameter"
     }
+} else {
+    Write-Info "📝 MSI installer creation skipped (use -CreateInstaller to enable)"
 }
 
 # Cleanup temp files
@@ -519,26 +649,87 @@ if (Test-Path $TempPath) {
     Write-Success "✅ Temporary files cleaned"
 }
 
+# Final validation and summary
+Write-Info ""
+Write-Info "🔍 Final validation of exported files..."
+
+# Validate main executable
+$mainExe = "$PackagePath\$ProjectName.exe"
+$exeValid = $false
+if (Test-Path $mainExe) {
+    $exeSize = [math]::Round((Get-Item $mainExe).Length / 1MB, 2)
+    if ($exeSize -gt 0) {
+        Write-Success "✅ Main executable: $ProjectName.exe ($exeSize MB)"
+        $exeValid = $true
+    } else {
+        Write-Error "❌ Main executable is empty or corrupted"
+    }
+} else {
+    Write-Error "❌ Main executable not found: $mainExe"
+}
+
+# Validate batch file
+$batchFile = "$PackagePath\StartMedicalLabAnalyzer.bat"
+if (Test-Path $batchFile) {
+    Write-Success "✅ Startup batch file: StartMedicalLabAnalyzer.bat"
+} else {
+    Write-Warning "⚠️ Startup batch file not found"
+}
+
+# Validate configuration
+$configFile = "$PackagePath\appsettings.json"
+if (Test-Path $configFile) {
+    Write-Success "✅ Configuration file: appsettings.json"
+} else {
+    Write-Warning "⚠️ Configuration file not found"
+}
+
+# Count total files in package
+$totalFiles = (Get-ChildItem $PackagePath -Recurse -File).Count
+$totalDirs = (Get-ChildItem $PackagePath -Recurse -Directory).Count
+Write-Info "📊 Package contains: $totalFiles files in $totalDirs directories"
+
+# Calculate total package size
+$packageSize = [math]::Round((Get-ChildItem $PackagePath -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
+Write-Info "📊 Total package size: $packageSize MB"
+
 # Summary
 Write-Info ""
 Write-Success "=================================================================="
 Write-Success "                     BUILD COMPLETED SUCCESSFULLY!"
 Write-Success "=================================================================="
 Write-Info ""
-Write-Success "📦 Package Location: $PackagePath"
+
+# Export summary
+Write-Success "🎯 EXPORTED FILES:"
+Write-Success "   📦 Package Directory: $PackagePath"
+if ($exeValid) {
+    Write-Success "   ✨ Main Executable: $ProjectName.exe (Ready to run!)"
+}
 if ($CompressOutput -and (Test-Path $zipPath)) {
-    Write-Success "🗜️ ZIP Package: $zipPath"
+    $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+    Write-Success "   🗜️ ZIP Package: $zipPath ($zipSize MB)"
 }
 if ($CreateInstaller -and (Test-Path $msiFile)) {
-    Write-Success "📦 MSI Installer: $msiFile"
+    $msiSize = [math]::Round((Get-Item $msiFile).Length / 1MB, 2)
+    Write-Success "   📦 MSI Installer: $msiFile ($msiSize MB)"
 }
+
 Write-Info ""
-Write-Info "🚀 Ready for deployment!"
-Write-Info "   1. Extract/Install on target machine"
+Write-Info "🚀 DEPLOYMENT INSTRUCTIONS:"
+Write-Info "   1. Copy package to target machine OR install MSI"
 Write-Info "   2. Set up AI models (see AI\ directories)"
-Write-Info "   3. Run StartMedicalLabAnalyzer.bat"
+Write-Info "   3. Double-click StartMedicalLabAnalyzer.bat OR run $ProjectName.exe"
 Write-Info "   4. Login with default credentials (admin/admin)"
-Write-Info "   5. Configure system and change passwords"
+Write-Info "   5. Configure system and change default passwords"
+Write-Info ""
+
+if ($exeValid) {
+    Write-Success "✨ APPLICATION READY FOR DEPLOYMENT! ✨"
+} else {
+    Write-Error "❌ BUILD ISSUES DETECTED - Please review the errors above"
+}
+
 Write-Info ""
 Write-Success "Build completed in $((Get-Date) - $script:StartTime)"
 Write-Info ""

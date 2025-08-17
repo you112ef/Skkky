@@ -85,8 +85,8 @@ jobs:
             Write-Host "✅ PowerShell Functions project found"
           }
           
-          Write-Output "environment=$environment" >> $env:GITHUB_OUTPUT
-          Write-Output "function-app-name=$functionAppName" >> $env:GITHUB_OUTPUT
+          "environment=$environment" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "function-app-name=$functionAppName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       
       - name: Check PowerShell version and capabilities
         id: ps-check
@@ -118,7 +118,7 @@ jobs:
             }
           }
           
-          Write-Output "version=$($PSVersionTable.PSVersion)" >> $env:GITHUB_OUTPUT
+          "version=$($PSVersionTable.PSVersion)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       
       - name: Check Azure credentials
         shell: powershell
@@ -193,7 +193,7 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ PowerShell Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            Write-Output "project-exists=true" >> $env:GITHUB_OUTPUT
+            "project-exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             
             # Check for host.json and other required files
             $hostJsonPath = Join-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" "host.json"
@@ -234,7 +234,7 @@ jobs:
             
           } else {
             Write-Host "ℹ️ No PowerShell Functions project found, skipping deployment"
-            Write-Output "project-exists=false" >> $env:GITHUB_OUTPUT
+            "project-exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
       
       - name: Run PowerShell tests

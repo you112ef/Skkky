@@ -140,9 +140,9 @@ jobs:
           Write-Host "Cores: $($systemInfo.ProcessorCores)"
           
           # Output for other steps
-          Write-Output "os-version=$($systemInfo.OSName)" >> $env:GITHUB_OUTPUT
-          Write-Output "is-server-2025=$($systemInfo.IsServer2025)" >> $env:GITHUB_OUTPUT
-          Write-Output "total-memory=$($systemInfo.TotalMemoryGB)" >> $env:GITHUB_OUTPUT
+          "os-version=$($systemInfo.OSName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "is-server-2025=$($systemInfo.IsServer2025)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "total-memory=$($systemInfo.TotalMemoryGB)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           
           # Check for Windows Server 2025 specific features
           if ($systemInfo.IsServer2025) {
@@ -151,10 +151,10 @@ jobs:
             # Check D: drive availability
             if (!(Test-Path "D:\")) {
               Write-Warning "⚠️ D: drive not available (expected on Server 2025)"
-              Write-Output "d-drive-available=false" >> $env:GITHUB_OUTPUT
+              "d-drive-available=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
               Write-Host "✅ D: drive available (unexpected on Server 2025)"
-              Write-Output "d-drive-available=true" >> $env:GITHUB_OUTPUT
+              "d-drive-available=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
           }
       
@@ -225,14 +225,14 @@ jobs:
             # Check if .NET 8.0 is available
             if ($sdks -like "*8.*") {
               Write-Host "✅ .NET 8.0 SDK found"
-              Write-Output "dotnet-8-available=true" >> $env:GITHUB_OUTPUT
+              "dotnet-8-available=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
               Write-Warning "⚠️ .NET 8.0 SDK not found"
-              Write-Output "dotnet-8-available=false" >> $env:GITHUB_OUTPUT
+              "dotnet-8-available=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
           } catch {
             Write-Error "❌ .NET check failed: $($_.Exception.Message)"
-            Write-Output "dotnet-8-available=false" >> $env:GITHUB_OUTPUT
+            "dotnet-8-available=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             exit 1
           }
       
@@ -260,10 +260,10 @@ jobs:
             
             if (Test-Path $testFile) {
               Write-Host "✅ Workspace operations successful"
-              Write-Output "workspace-test=passed" >> $env:GITHUB_OUTPUT
+              "workspace-test=passed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
               Write-Error "❌ File creation failed"
-              Write-Output "workspace-test=failed" >> $env:GITHUB_OUTPUT
+              "workspace-test=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
             
             # Cleanup
@@ -271,7 +271,7 @@ jobs:
             
           } catch {
             Write-Error "❌ Workspace test failed: $($_.Exception.Message)"
-            Write-Output "workspace-test=failed" >> $env:GITHUB_OUTPUT
+            "workspace-test=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
       
       - name: Test project build
@@ -302,17 +302,17 @@ jobs:
               }
               
               Write-Host "✅ Build successful"
-              Write-Output "build-test=passed" >> $env:GITHUB_OUTPUT
+              "build-test=passed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
               
             } catch {
               Write-Error "❌ Build failed: $($_.Exception.Message)"
-              Write-Output "build-test=failed" >> $env:GITHUB_OUTPUT
+              "build-test=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } finally {
               Pop-Location
             }
           } else {
             Write-Host "ℹ️ Project file not found, skipping build test"
-            Write-Output "build-test=skipped" >> $env:GITHUB_OUTPUT
+            "build-test=skipped" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
       
       - name: Test AI dependencies
@@ -435,7 +435,7 @@ jobs:
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
           $perfResults | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\performance-${{ matrix.os }}-${{ matrix.config }}.json"
           
-          Write-Output "score=$overallScore" >> $env:GITHUB_OUTPUT
+          "score=$overallScore" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       
       - name: Compatibility assessment
         id: compatibility
@@ -499,8 +499,8 @@ jobs:
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
           $compatReport | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\compatibility-${{ matrix.os }}-${{ matrix.config }}.json"
           
-          Write-Output "status=$status" >> $env:GITHUB_OUTPUT
-          Write-Output "issues-count=$($issues.Count)" >> $env:GITHUB_OUTPUT
+          "status=$status" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "issues-count=$($issues.Count)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       
       - name: Upload test results
         if: always()

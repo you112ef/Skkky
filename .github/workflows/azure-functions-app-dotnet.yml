@@ -85,8 +85,8 @@ jobs:
             Write-Host "✅ Functions project found"
           }
           
-          Write-Output "environment=$environment" >> $env:GITHUB_OUTPUT
-          Write-Output "function-app-name=$functionAppName" >> $env:GITHUB_OUTPUT
+          "environment=$environment" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "function-app-name=$functionAppName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       
       - name: Check Azure credentials
         shell: powershell
@@ -145,21 +145,21 @@ jobs:
         run: |
           if (Test-Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}") {
             Write-Host "✅ Functions project found at: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
-            Write-Output "project-exists=true" >> $env:GITHUB_OUTPUT
+            "project-exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             
             # Look for project files
             $projectFiles = Get-ChildItem -Path "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}" -Filter "*.csproj" -Recurse
             if ($projectFiles.Count -gt 0) {
               $projectFile = $projectFiles[0].FullName
               Write-Host "📁 Project file: $projectFile"
-              Write-Output "project-file=$projectFile" >> $env:GITHUB_OUTPUT
+              "project-file=$projectFile" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             } else {
               Write-Error "❌ No .csproj file found in Functions directory"
               exit 1
             }
           } else {
             Write-Host "ℹ️ No Functions project found, skipping deployment"
-            Write-Output "project-exists=false" >> $env:GITHUB_OUTPUT
+            "project-exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           }
       
       - name: Restore NuGet packages

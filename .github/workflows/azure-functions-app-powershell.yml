@@ -313,7 +313,7 @@ jobs:
             # Verify structure
             Write-Host " Verifying package structure:"
             Get-ChildItem -Recurse | ForEach-Object {
-              $relativePath = $_.FullName.Replace((Get-Location).Path, '').TrimStart('\\')
+              $relativePath = $_.FullName.Replace((Get-Location).Path, '').TrimStart('\\', '/')
               Write-Host "   $relativePath"
             }
             

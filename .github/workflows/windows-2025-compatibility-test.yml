@@ -201,7 +201,8 @@ jobs:
             
             # Create results directory
             New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
-            $results | ConvertTo-Json -Depth 3 | Out-File "${{ env.TEST_RESULTS_PATH }}\basic-dependencies-${{ matrix.os }}-${{ matrix.config }}.json"
+            $outputPath = Join-Path "${{ env.TEST_RESULTS_PATH }}" "basic-dependencies-${{ matrix.os }}-${{ matrix.config }}.json"
+            $results | ConvertTo-Json -Depth 3 | Out-File $outputPath
           }
       
       - name: Setup .NET SDK
@@ -370,7 +371,8 @@ jobs:
           
           # Save AI test results
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
-          $aiTestResults | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\ai-test-${{ matrix.os }}-${{ matrix.config }}.json"
+          $aiOutputPath = Join-Path "${{ env.TEST_RESULTS_PATH }}" "ai-test-${{ matrix.os }}-${{ matrix.config }}.json"
+          $aiTestResults | ConvertTo-Json | Out-File $aiOutputPath
       
       - name: Performance benchmarks
         if: needs.setup.outputs.should-run-performance == 'true'
@@ -447,7 +449,8 @@ jobs:
           }
           
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
-          $perfResults | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\performance-${{ matrix.os }}-${{ matrix.config }}.json"
+          $perfOutputPath = Join-Path "${{ env.TEST_RESULTS_PATH }}" "performance-${{ matrix.os }}-${{ matrix.config }}.json"
+          $perfResults | ConvertTo-Json | Out-File $perfOutputPath
           
           $scoreOutput = 'score=' + $overallScore
           Add-Content -Path $env:GITHUB_OUTPUT -Value $scoreOutput
@@ -512,7 +515,8 @@ jobs:
           }
           
           New-Item -ItemType Directory -Path "${{ env.TEST_RESULTS_PATH }}" -Force | Out-Null
-          $compatReport | ConvertTo-Json | Out-File "${{ env.TEST_RESULTS_PATH }}\compatibility-${{ matrix.os }}-${{ matrix.config }}.json"
+          $compatOutputPath = Join-Path "${{ env.TEST_RESULTS_PATH }}" "compatibility-${{ matrix.os }}-${{ matrix.config }}.json"
+          $compatReport | ConvertTo-Json | Out-File $compatOutputPath
           
           $statusOutput = 'status=' + $status
           Add-Content -Path $env:GITHUB_OUTPUT -Value $statusOutput
